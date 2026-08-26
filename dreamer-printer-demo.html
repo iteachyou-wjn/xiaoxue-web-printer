@@ -1,0 +1,572 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Dreamer 打印控件 · 演示页面</title>
+  <script src="dreamer-printer-sdk.js"></script>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: "Microsoft YaHei", "PingFang SC", "Segoe UI", sans-serif;
+      background: #f0f2f5;
+      color: #333;
+      padding: 24px;
+    }
+    .container { max-width: 1100px; margin: 0 auto; }
+
+    header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      background: #fff;
+      border-radius: 10px;
+      padding: 16px 20px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+      margin-bottom: 16px;
+    }
+    header h1 { font-size: 20px; font-weight: 600; }
+    header .sub { color: #999; font-size: 13px; margin-top: 4px; }
+
+    .conn-status {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    .dot {
+      width: 12px; height: 12px; border-radius: 50%;
+      background: #ccc;
+      transition: background .3s;
+    }
+    .dot.on { background: #27ae60; box-shadow: 0 0 6px #27ae60; }
+    .dot.off { background: #e74c3c; }
+
+    .card {
+      background: #fff;
+      border-radius: 10px;
+      padding: 18px 20px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+      margin-bottom: 16px;
+    }
+    .card h2 { font-size: 16px; font-weight: 600; margin-bottom: 14px; border-left: 4px solid #2f6fed; padding-left: 10px; }
+
+    .btn {
+      padding: 8px 18px;
+      border: none;
+      border-radius: 6px;
+      font-size: 14px;
+      cursor: pointer;
+      transition: opacity .2s;
+    }
+    .btn:hover { opacity: 0.88; }
+    .btn-primary { background: #2f6fed; color: #fff; }
+    .btn-success { background: #27ae60; color: #fff; }
+    .btn-danger  { background: #e74c3c; color: #fff; }
+    .btn-gray    { background: #eef0f3; color: #555; }
+    .btn[disabled] { opacity: 0.5; cursor: not-allowed; }
+
+    .form-row { display: flex; gap: 12px; flex-wrap: wrap; margin-bottom: 12px; }
+    .form-group { flex: 1; min-width: 220px; }
+    .form-group label { display: block; font-size: 13px; color: #666; margin-bottom: 6px; }
+    .form-group input, .form-group select, .form-group textarea {
+      width: 100%;
+      padding: 9px 12px;
+      border: 1px solid #d9dde3;
+      border-radius: 6px;
+      font-size: 14px;
+      font-family: inherit;
+      outline: none;
+      background: #fff;
+    }
+    .form-group input:focus, .form-group select:focus, .form-group textarea:focus { border-color: #2f6fed; }
+    textarea { resize: vertical; min-height: 70px; }
+
+    table { width: 100%; border-collapse: collapse; font-size: 14px; }
+    th, td { text-align: left; padding: 10px 12px; border-bottom: 1px solid #eef0f3; }
+    th { background: #f7f8fa; color: #666; font-weight: 600; font-size: 13px; }
+    tr:hover td { background: #fafbfc; }
+    .empty { text-align: center; color: #aaa; padding: 24px; }
+
+    .tag { display: inline-block; padding: 2px 10px; border-radius: 10px; font-size: 12px; color: #fff; }
+    .tag-pending    { background: #f39c12; }
+    .tag-printing   { background: #3498db; }
+    .tag-completed  { background: #27ae60; }
+    .tag-failed     { background: #e74c3c; }
+
+    .ops { display: flex; gap: 10px; margin-bottom: 12px; }
+    .ops .spacer { flex: 1; }
+
+    #log {
+      height: 150px;
+      overflow-y: auto;
+      background: #1e2430;
+      color: #d6dae3;
+      border-radius: 6px;
+      padding: 10px 12px;
+      font-family: Consolas, "Courier New", monospace;
+      font-size: 12px;
+      line-height: 1.6;
+    }
+    #log .info { color: #7ecb8a; }
+    #log .warn { color: #f0c36d; }
+    #log .error { color: #e88080; }
+
+    .footer { text-align: center; color: #aaa; font-size: 12px; padding: 8px 0 20px; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <header>
+      <div>
+        <h1>🖨️ Dreamer 打印控件</h1>
+        <div class="sub">WebSocket 客户端 SDK 演示 · 服务地址 ws://localhost:54321</div>
+      </div>
+      <div class="conn-status">
+        <span class="dot" id="connDot"></span>
+        <span id="connText">未连接</span>
+        <button class="btn btn-primary" id="btnConnect">连接</button>
+        <button class="btn btn-gray" id="btnDisconnect" disabled>断开</button>
+      </div>
+    </header>
+
+    <!-- 提交打印任务 -->
+    <div class="card">
+      <h2>提交打印任务</h2>
+      <div class="form-row">
+        <div class="form-group">
+          <label>任务名称</label>
+          <input type="text" id="taskName" placeholder="例如：销售报表">
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label>打印机 <span id="printerCount" style="color:#999;font-weight:normal;"></span></label>
+          <select id="taskPrinter">
+            <option value="">正在获取打印机...</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>纸张 <span id="pageSizeCount" style="color:#999;font-weight:normal;"></span></label>
+          <select id="taskPageSize">
+            <option value="">请先选择打印机</option>
+          </select>
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label>打印内容</label>
+          <textarea id="taskContent" placeholder="请输入要打印的内容..."></textarea>
+        </div>
+      </div>
+      <div class="ops" style="margin-bottom:0;">
+        <button class="btn btn-primary" id="btnPreview" disabled>打印预览</button>
+        <button class="btn btn-success" id="btnSubmit" disabled>提交打印</button>
+      </div>
+    </div>
+
+    <!-- 任务列表 -->
+    <div class="card">
+      <h2>任务列表</h2>
+      <div class="ops">
+        <button class="btn btn-gray" id="btnRefresh" disabled>刷新</button>
+        <button class="btn btn-danger" id="btnClear" disabled>清除已完成</button>
+        <button class="btn btn-success" id="btnPrintTable" disabled>打印当前页面</button>
+        <button class="btn btn-primary" id="btnPrintTablePreview" disabled>打印当前页面预览</button>
+        <div class="spacer"></div>
+        <span id="taskCount" style="color:#999;font-size:13px;align-self:center;"></span>
+      </div>
+      <table id="taskTable">
+        <thead>
+          <tr>
+            <th style="width:60px;">任务ID</th>
+            <th>任务名称</th>
+            <th>打印机</th>
+            <th style="width:90px;">状态</th>
+            <th>创建时间</th>
+            <th>完成时间</th>
+            <th style="width:80px;">操作</th>
+          </tr>
+        </thead>
+        <tbody id="taskBody">
+          <tr><td colspan="7" class="empty">暂无任务</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <!-- 日志 -->
+    <div class="card">
+      <h2>通信日志</h2>
+      <div id="log"></div>
+    </div>
+
+    <!-- 新闻内容（作为打印 / 预览的数据源，已加长以验证多页打印） -->
+    <div class="card" id="newsDiv">
+      <h2 style="font-size: 16px;">今日新闻</h2>
+      <h3 style="font-size: 14px;margin:10px 0 8px;font-size:18px;line-height: 30px; color:#222;">
+        我国新一代超级计算机投入运行 算力规模位居全球前列
+      </h3>
+      <img src="https://contentcms-bj.cdn.bcebos.com/cmspic/5786824ddc0bdfef1f2def9b1c8b8fde.jpeg?x-bce-process=image/crop,x_0,y_0,w_665,h_362" alt="新闻配图"
+           style="width:100%;max-width:640px;height:auto;border-radius:8px;margin:10px 0;display:block;">
+      <p style="line-height:1.9;font-size:14px;color:#444;margin-bottom:10px;">
+        新华社北京电 记者从国家超级计算中心获悉，我国新一代超级计算机系统近日正式投入运行，其峰值算力与能效比均位居全球前列，将为人工智能、气候模拟、生命科学、高端制造等领域提供强大的算力支撑，进一步助力高水平科技自立自强。
+      </p>
+      <p style="line-height:1.9;font-size:14px;color:#444;margin-bottom:10px;">
+        专家表示，超算算力的提升将显著缩短科研攻关周期，推动大模型训练、新材料研发与药物筛选等关键环节实现突破，对加快培育新质生产力、服务国家重大战略需求具有重要意义。
+      </p>
+
+      <h4 style="font-size:16px;color:#2f6fed;margin:14px 0 8px;">一、算力规模与性能指标</h4>
+      <p style="line-height:1.9;font-size:14px;color:#444;margin-bottom:10px;">
+        据介绍，该系统由国家超级计算中心牵头研制，采用国产高性能处理器与高速互联网络，系统峰值浮点运算能力达到每秒百亿亿次级别，综合性能较上一代系统提升数倍。在最新的国际高性能计算基准测试中，该系统在多项核心指标上均进入全球前列，其中持续运算能力、能效比等指标表现尤为突出。
+      </p>
+      <p style="line-height:1.9;font-size:14px;color:#444;margin-bottom:10px;">
+        除整机算力外，该系统的存储与网络架构同样进行了全面升级，采用新型并行文件系统与超低延迟高速互联技术，可实现大规模并行任务的快速调度与数据流转。专家指出，系统在支持百万亿参数级大模型训练的同时，仍能保持较高的资源利用率和运行稳定性，这标志着我国在高性能计算领域已具备自主研发、自主可控的完整能力。
+      </p>
+
+      <h4 style="font-size:16px;color:#2f6fed;margin:14px 0 8px;">二、应用领域与科研价值</h4>
+      <p style="line-height:1.9;font-size:14px;color:#444;margin-bottom:10px;">
+        在人工智能领域，系统将为大规模深度学习模型的训练与推理提供强劲算力支撑。相关负责人表示，过去需要数周才能完成的大模型训练任务，在新的超算平台上可缩短至数天，这将显著加速国产大模型的技术迭代与产业化落地进程。
+      </p>
+      <p style="line-height:1.9;font-size:14px;color:#444;margin-bottom:10px;">
+        在气候与气象领域，系统可支撑高分辨率全球气候模拟与极端天气预警，为应对气候变化、防灾减灾提供更精准的科学依据。在生命科学领域，系统将服务于基因组学、蛋白质结构预测与药物筛选等前沿研究，助力新药研发缩短周期、降低成本。
+      </p>
+      <p style="line-height:1.9;font-size:14px;color:#444;margin-bottom:10px;">
+        在高端制造领域，系统可用于复杂装备的数值仿真、材料设计与工艺优化，帮助企业在产品研发阶段大幅减少物理试验次数，提升研发效率与产品质量。此外，系统还将面向科研院所与中小企业提供公共算力服务，降低前沿技术应用门槛。
+      </p>
+
+      <h4 style="font-size:16px;color:#2f6fed;margin:14px 0 8px;">三、产业带动与生态建设</h4>
+      <p style="line-height:1.9;font-size:14px;color:#444;margin-bottom:10px;">
+        超算生态的构建离不开软硬件协同发展。近年来，我国持续加大在基础软件、开发框架与行业应用领域的投入，围绕新一代超算平台形成了涵盖操作系统、编译工具链、调度平台与行业解决方案的完整生态。本次投运的系统将开放接口与开发环境，吸引更多科研机构与企业参与生态共建。
+      </p>
+      <p style="line-height:1.9;font-size:14px;color:#444;margin-bottom:10px;">
+        业内分析认为，超级计算机作为大国重器，其算力水平直接关系到国家在人工智能、新材料、新能源等战略性新兴产业的国际竞争力。随着超算与云计算、大数据、边缘计算等技术的深度融合，算力资源将加速走向普惠化，为数字经济发展注入新动能。
+      </p>
+
+      <h4 style="font-size:16px;color:#2f6fed;margin:14px 0 8px;">四、未来展望</h4>
+      <p style="line-height:1.9;font-size:14px;color:#444;margin-bottom:10px;">
+        展望未来，我国将继续推进超算技术自主创新，加快突破新一代处理器、量子计算与异构融合等前沿技术，构建更加完善的高性能计算体系。同时，将进一步完善算力基础设施布局，推动算力资源跨区域协同调度，让超级计算更好服务经济社会发展全局。
+      </p>
+      <p style="line-height:1.9;font-size:14px;color:#444;margin-bottom:10px;">
+        中国科学院院士在接受采访时表示，新一代超级计算机的投运是我国计算能力体系化发展的重要里程碑，标志着我国已初步形成从核心部件到整机系统、从基础软件到行业应用的完整创新链条，为加快建设科技强国提供了坚实的算力底座。
+      </p>
+
+      <p style="line-height:1.9;font-size:14px;color:#444;text-align:right;">
+        —— 据新华社综合报道
+      </p>
+    </div>
+
+    <div class="footer">Dreamer 打印控件 · dreamer-printer-sdk.js</div>
+  </div>
+
+  <script>
+    var STATUS_MAP = {
+      'PENDING':   { text: '待打印', cls: 'tag-pending' },
+      'PRINTING':  { text: '打印中', cls: 'tag-printing' },
+      'COMPLETED': { text: '已完成', cls: 'tag-completed' },
+      'FAILED':    { text: '失败',   cls: 'tag-failed' }
+    };
+
+    var sdk = new DreamerPrinterSDK({ url: 'ws://localhost:54321' });
+    var taskList = [];
+
+    // ---------- DOM ----------
+    var $ = function (id) { return document.getElementById(id); };
+    var btnConnect = $('btnConnect'), btnDisconnect = $('btnDisconnect');
+    var btnPreview = $('btnPreview'), btnSubmit = $('btnSubmit');
+    var btnRefresh = $('btnRefresh'), btnClear = $('btnClear');
+    var btnPrintTable = $('btnPrintTable'), btnPrintTablePreview = $('btnPrintTablePreview');
+
+    // ---------- 日志 ----------
+    function log(msg, level) {
+      var el = $('log');
+      var div = document.createElement('div');
+      div.className = level || 'info';
+      var time = new Date().toLocaleTimeString('zh-CN', { hour12: false });
+      div.textContent = '[' + time + '] ' + msg;
+      el.appendChild(div);
+      el.scrollTop = el.scrollHeight;
+    }
+
+    // ---------- 连接状态 ----------
+    function setConnected(connected) {
+      $('connDot').className = 'dot ' + (connected ? 'on' : 'off');
+      $('connText').textContent = connected ? '已连接' : '未连接';
+      btnConnect.disabled = connected;
+      btnDisconnect.disabled = !connected;
+      btnPreview.disabled = !connected;
+      btnSubmit.disabled = !connected;
+      btnRefresh.disabled = !connected;
+      btnClear.disabled = !connected;
+      btnPrintTable.disabled = !connected;
+      btnPrintTablePreview.disabled = !connected;
+    }
+
+    // ---------- SDK 事件绑定 ----------
+    sdk.on('open', function () {
+      setConnected(true);
+      log('已连接到打印服务', 'info');
+      sdk.getTaskList().then(renderTasks).catch(function (e) { log('获取任务列表失败: ' + e.message, 'error'); });
+    });
+
+    sdk.on('close', function () {
+      setConnected(false);
+      log('连接已断开', 'warn');
+    });
+
+    sdk.on('error', function (e) {
+      log('连接错误: ' + (e && e.message || '未知错误'), 'error');
+    });
+
+    sdk.on('welcome', function (msg) {
+      log('收到欢迎消息: ' + msg.message + '（端口 ' + msg.port + '）', 'info');
+    });
+
+    sdk.on('taskListUpdate', function (tasks) {
+      taskList = tasks;
+      renderTasks(tasks);
+      log('收到任务列表更新推送，共 ' + tasks.length + ' 个任务', 'info');
+    });
+
+    sdk.on('message', function (msg) {
+      if (msg && msg.type) {
+        log('收到消息: ' + JSON.stringify(msg), 'info');
+      }
+    });
+
+    // ---------- 渲染任务列表 ----------
+    function renderTasks(tasks) {
+      taskList = tasks || [];
+      var body = $('taskBody');
+      body.innerHTML = '';
+      $('taskCount').textContent = '共 ' + taskList.length + ' 个任务';
+
+      if (taskList.length === 0) {
+        var tr = document.createElement('tr');
+        var td = document.createElement('td');
+        td.colSpan = 7;
+        td.className = 'empty';
+        td.textContent = '暂无任务';
+        tr.appendChild(td);
+        body.appendChild(tr);
+        return;
+      }
+
+      taskList.forEach(function (task) {
+        var st = STATUS_MAP[task.status] || { text: task.status, cls: 'tag-pending' };
+        var tr = document.createElement('tr');
+
+        var tdId = document.createElement('td');
+        tdId.textContent = task.id;
+
+        var tdName = document.createElement('td');
+        tdName.textContent = task.name;
+
+        var tdPrinter = document.createElement('td');
+        tdPrinter.textContent = task.printerName;
+
+        var tdStatus = document.createElement('td');
+        var span = document.createElement('span');
+        span.className = 'tag ' + st.cls;
+        span.textContent = st.text;
+        tdStatus.appendChild(span);
+
+        var tdCreate = document.createElement('td');
+        tdCreate.textContent = task.createTime || '-';
+
+        var tdFinish = document.createElement('td');
+        tdFinish.textContent = task.finishTime || '-';
+
+        var tdOp = document.createElement('td');
+        var cancelBtn = document.createElement('button');
+        cancelBtn.className = 'btn btn-gray';
+        cancelBtn.style.padding = '3px 10px';
+        cancelBtn.textContent = '取消';
+        cancelBtn.disabled = task.status !== 'PENDING';
+        cancelBtn.addEventListener('click', function () {
+          sdk.cancelTask(task.id)
+            .then(function (r) { log('取消任务 ' + task.id + ': ' + r.message, 'info'); })
+            .catch(function (e) { log('取消失败: ' + e.message, 'error'); });
+        });
+        tdOp.appendChild(cancelBtn);
+
+        tr.appendChild(tdId);
+        tr.appendChild(tdName);
+        tr.appendChild(tdPrinter);
+        tr.appendChild(tdStatus);
+        tr.appendChild(tdCreate);
+        tr.appendChild(tdFinish);
+        tr.appendChild(tdOp);
+        body.appendChild(tr);
+      });
+    }
+
+    // ---------- 获取并展示可用打印机 ----------
+    function addOption(sel, text, value) {
+      var opt = document.createElement('option');
+      opt.textContent = text;
+      opt.value = value;
+      sel.appendChild(opt);
+    }
+
+    function loadPrinters() {
+      var sel = $('taskPrinter');
+      var count = $('printerCount');
+      sdk.getPrinters()
+        .then(function (res) {
+          var list = res.printers;
+          sel.innerHTML = '';
+          if (!list || list.length === 0) {
+            addOption(sel, '默认打印机', '默认打印机');
+            count.textContent = '（可用 0 台）';
+          } else {
+            list.forEach(function (p) { addOption(sel, p, p); });
+            count.textContent = '（可用 ' + list.length + ' 台）';
+          }
+          log('已获取打印机列表: ' + (list.join(', ') || '默认打印机'), 'info');
+          // 自动加载默认选中打印机的纸张类型
+          loadPageSizes(sel.value);
+        })
+        .catch(function (e) {
+          sel.innerHTML = '';
+          addOption(sel, '默认打印机', '默认打印机');
+          count.textContent = '（获取失败）';
+          log('获取打印机失败: ' + e.message, 'error');
+          loadPageSizes('');
+        });
+    }
+
+    // ---------- 获取并展示指定打印机的纸张类型 ----------
+    function loadPageSizes(printerName) {
+      var sel = $('taskPageSize');
+      var count = $('pageSizeCount');
+      if (!printerName) {
+        sel.innerHTML = '<option value="">请先选择打印机</option>';
+        count.textContent = '';
+        return;
+      }
+      sel.innerHTML = '<option value="">加载中...</option>';
+      count.textContent = '';
+      sdk.getPageSize(printerName)
+        .then(function (res) {
+          var sizes = res.sizes;
+          sel.innerHTML = '';
+          if (!sizes || sizes.length === 0) {
+            addOption(sel, '默认纸张', '默认纸张');
+            count.textContent = '（可用 0 种）';
+          } else {
+            sizes.forEach(function (s) { addOption(sel, s, s); });
+            count.textContent = '（可用 ' + sizes.length + ' 种）';
+          }
+          log('打印机 [' + printerName + '] 可用纸张: ' + (sizes.join(', ') || '默认纸张'), 'info');
+        })
+        .catch(function (e) {
+          sel.innerHTML = '';
+          addOption(sel, '默认纸张', '默认纸张');
+          count.textContent = '（获取失败）';
+          log('获取打印机 [' + printerName + '] 纸张失败: ' + e.message, 'error');
+        });
+    }
+
+    // 选择打印机后自动加载其可用纸张
+    $('taskPrinter').addEventListener('change', function () {
+      loadPageSizes(this.value);
+    });
+
+    // ---------- 按钮事件 ----------
+    btnConnect.addEventListener('click', function () {
+      sdk.connect();
+      log('正在连接 ' + sdk.url + ' ...', 'info');
+    });
+
+    btnDisconnect.addEventListener('click', function () {
+      sdk.disconnect();
+      setConnected(false);
+      log('已手动断开', 'warn');
+    });
+
+    // ---------- 构造 doPrint / doPreview 公共请求参数 ----------
+    function buildPrintRequest() {
+      var printer = $('taskPrinter').value.trim() || '默认打印机';
+      var pageSize = $('taskPageSize').value.trim() || 'A4';
+      var content = $('taskContent').value;
+      return {
+        style: {
+          margin: { top: 1, right: 1, bottom: 1, left: 1 },
+          zoom: 1,
+          direction: 'vertical',
+          paperHeader: '',
+          paperFooter: '',
+          fontFamily: '宋体',
+          fontSize: 12,
+          paper: pageSize
+        },
+        printer: printer,
+        content: { type: 'text', value: content }
+      };
+    }
+
+    // ---------- 打印预览 ----------
+    btnPreview.addEventListener('click', function () {
+      sdk.doPreview(buildPrintRequest())
+        .then(function (r) {
+          log('打印预览已打开（' + (r.message || '') + '）', 'info');
+        })
+        .catch(function (e) { log('打开预览失败: ' + e.message, 'error'); });
+    });
+
+    // ---------- 提交打印 ----------
+    btnSubmit.addEventListener('click', function () {
+      // 调用 doPrint：提交并执行打印任务
+      sdk.doPrint(buildPrintRequest())
+        .then(function (r) {
+          log('打印任务已提交，任务ID: ' + r.taskId + '（' + (r.message || '') + '）', 'info');
+          $('taskContent').value = '';
+        })
+        .catch(function (e) { log('提交打印失败: ' + e.message, 'error'); });
+    });
+
+    btnRefresh.addEventListener('click', function () {
+      sdk.getTaskList()
+        .then(function (r) { renderTasks(r.tasks); log('已刷新任务列表', 'info'); })
+        .catch(function (e) { log('刷新失败: ' + e.message, 'error'); });
+    });
+
+    btnClear.addEventListener('click', function () {
+      sdk.clearTasks()
+        .then(function (r) { log('清除结果: ' + r.message, 'info'); })
+        .catch(function (e) { log('清除失败: ' + e.message, 'error'); });
+    });
+
+    // ---------- 打印当前页面（新闻 div，以 html 方式传递） ----------
+    btnPrintTable.addEventListener('click', function () {
+      var newsHtml = $('newsDiv').outerHTML;
+      var req = buildPrintRequest();
+      req.content = { type: 'html', value: newsHtml };
+      sdk.doPrint(req)
+        .then(function (r) {
+          log('已提交打印任务（HTML），任务ID: ' + r.taskId + '（' + (r.message || '') + '）', 'info');
+        })
+        .catch(function (e) { log('提交打印失败: ' + e.message, 'error'); });
+    });
+
+    // ---------- 打印当前页面预览（新闻 div，以 html 方式传递） ----------
+    btnPrintTablePreview.addEventListener('click', function () {
+      var newsHtml = $('newsDiv').outerHTML;
+      var req = buildPrintRequest();
+	  console.log(newsHtml)
+      req.content = { type: 'html', value: newsHtml };
+      sdk.doPreview(req)
+        .then(function (r) {
+          log('打印预览已打开（HTML）（' + (r.message || '') + '）', 'info');
+        })
+        .catch(function (e) { log('打开预览失败: ' + e.message, 'error'); });
+    });
+
+    // ---------- 初始化 ----------
+    setConnected(false);
+    log('页面已加载，SDK 就绪。请先点击「连接」。', 'info');
+
+    // 页面加载即自动获取可用打印机并展示
+    loadPrinters();
+  </script>
+</body>
+</html>
