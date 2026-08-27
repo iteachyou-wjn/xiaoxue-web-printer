@@ -1,5 +1,6 @@
 package cc.iteachyou.printservice.print;
 
+import cc.iteachyou.printservice.print.bartender.BartenderManager;
 import cc.iteachyou.printservice.websocket.PrintTask;
 import com.alibaba.fastjson2.JSONObject;
 import org.apache.pdfbox.pdmodel.PDDocument;
@@ -8,6 +9,8 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.awt.print.PrinterJob;
+import java.util.HashMap;
+import java.util.Map;
 import javax.print.PrintService;
 import javax.print.PrintServiceLookup;
 
@@ -41,6 +44,11 @@ public class PrintTaskExecutor {
      * @throws Exception 打印失败时抛出
      */
     public static void execute(PrintTask task, JSONObject style, JSONObject content) throws Exception {
+        String contentType = content != null ? content.getString("type") : null;
+        if ("bartender".equalsIgnoreCase(contentType)) {
+            executeBartender(task, content);
+            return;
+        }
         try (PDDocument doc = HtmlRenderService.render(style, content)) {
             PrinterJob job = PrinterJob.getPrinterJob();
 
@@ -56,6 +64,38 @@ public class PrintTaskExecutor {
 
             log.info("打印完成，任务: {}", task.getId());
         }
+    }
+
+    /**
+     * BarTender 类型打印：使用 {@link BartenderManager#print} 直接调用 BarTender 打印模板。
+     *
+     * @param task    打印任务（含打印机名称）
+     * @param content 内容对象（type: bartender, value: 模板路径, params: 模板字段值）
+     */
+    private static void executeBartender(PrintTask task, JSONObject content) throws Exception {
+        String template = content.getString("value");
+        if (template == null || template.trim().isEmpty()) {
+            throw new IllegalArgumentException("BarTender 模板路径不能为空");
+        }
+        Map<String, String> params = extractParams(content);
+        int result = BartenderManager.print(template, params, task.getPrinterName());
+        if (result < 0) {
+            throw new RuntimeException("BarTender 打印失败（请确认本机已安装 BarTender 且模板有效）");
+        }
+        log.info("BarTender 打印完成，任务: {}", task.getId());
+    }
+
+    /** 从 content.params 提取模板字段值 */
+    private static Map<String, String> extractParams(JSONObject content) {
+        Map<String, String> params = new HashMap<>();
+        JSONObject p = content != null ? content.getJSONObject("params") : null;
+        if (p != null) {
+            for (String key : p.keySet()) {
+                Object v = p.get(key);
+                params.put(key, v == null ? "" : String.valueOf(v));
+            }
+        }
+        return params;
     }
 
     private static PrintService findPrintService(String name) {

@@ -1,6 +1,7 @@
 package cc.iteachyou.printservice.websocket;
 
 import cc.iteachyou.printservice.print.PrintTaskExecutor;
+import cc.iteachyou.printservice.print.bartender.BartenderManager;
 import cc.iteachyou.printservice.ui.PreviewDialog;
 import com.alibaba.fastjson2.JSON;
 import com.alibaba.fastjson2.JSONException;
@@ -17,6 +18,8 @@ import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.util.ArrayList;
+import java.util.Base64;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
@@ -120,6 +123,10 @@ public class PrintWebSocketServer extends WebSocketServer {
                 case "pageSize" -> handlePageSize(conn, request);
                 case "doPrint" -> handleDoPrint(conn, request);
                 case "doPreview" -> handleDoPreview(conn, request);
+                case "bartenderInstance" -> handleBartenderInstance(conn);
+                case "bartenderTemplateParams" -> handleBartenderTemplateParams(conn, request);
+                case "bartenderTemplateImage" -> handleBartenderTemplateImage(conn, request, false);
+                case "bartenderTemplateImageWithParams" -> handleBartenderTemplateImage(conn, request, true);
                 case "submit" -> sendError(conn, "submit 已移除，请使用 doPrint");
                 default -> sendError(conn, "未知的消息类型: " + type);
             }
@@ -530,6 +537,93 @@ public class PrintWebSocketServer extends WebSocketServer {
             case "iso_b5_envelope": return "B5 Envelope";
             default: return name;
         }
+    }
+
+    // ========== BarTender 相关 ==========
+
+    /**
+     * 处理获取 BarTender 实例信息（版本号等）
+     * { "type": "bartenderInstance" }
+     *   → { "type": "bartenderInstance_result", success, available, version, fullVersion, message }
+     */
+    private void handleBartenderInstance(WebSocket conn) {
+        JSONObject response = new JSONObject();
+        response.put("type", "bartenderInstance_result");
+        boolean available = BartenderManager.isAvailable();
+        response.put("success", available);
+        response.put("available", available);
+        response.put("version", BartenderManager.getVersion());
+        response.put("fullVersion", BartenderManager.getFullVersion());
+        if (!available) {
+            response.put("message", "BarTender 未安装或不可用");
+        }
+        conn.send(JSON.toJSONString(response));
+    }
+
+    /**
+     * 处理获取 BarTender 模板参数
+     * { "type": "bartenderTemplateParams", "templatePath": "..." }
+     *   → { "type": "bartenderTemplateParams_result", success, templatePath, params: [...] }
+     */
+    private void handleBartenderTemplateParams(WebSocket conn, JSONObject request) {
+        String templatePath = request.getString("templatePath");
+        JSONObject response = new JSONObject();
+        response.put("type", "bartenderTemplateParams_result");
+        response.put("templatePath", templatePath);
+        if (templatePath == null || templatePath.trim().isEmpty()) {
+            response.put("success", false);
+            response.put("message", "缺少 templatePath 字段");
+        } else {
+            List<Map<String, String>> params = BartenderManager.getTemplateParameters(templatePath.trim());
+            response.put("success", true);
+            response.put("params", params);
+        }
+        conn.send(JSON.toJSONString(response));
+    }
+
+    /**
+     * 处理获取 BarTender 模板图像（可选带参数），图片以 base64 返回
+     * { "type": "bartenderTemplateImage", "templatePath": "...", "dpi": 300 }
+     * { "type": "bartenderTemplateImageWithParams", "templatePath": "...", "params": {...}, "dpi": 300 }
+     */
+    private void handleBartenderTemplateImage(WebSocket conn, JSONObject request, boolean withParams) {
+        String respType = withParams
+                ? "bartenderTemplateImageWithParams_result"
+                : "bartenderTemplateImage_result";
+        String templatePath = request.getString("templatePath");
+        JSONObject response = new JSONObject();
+        response.put("type", respType);
+        response.put("templatePath", templatePath);
+        if (templatePath == null || templatePath.trim().isEmpty()) {
+            response.put("success", false);
+            response.put("message", "缺少 templatePath 字段");
+            conn.send(JSON.toJSONString(response));
+            return;
+        }
+        int dpi = request.getIntValue("dpi");
+        if (dpi <= 0) {
+            dpi = 300;
+        }
+        Map<String, String> params = null;
+        if (withParams) {
+            params = new HashMap<>();
+            JSONObject p = request.getJSONObject("params");
+            if (p != null) {
+                for (String key : p.keySet()) {
+                    Object v = p.get(key);
+                    params.put(key, v == null ? "" : String.valueOf(v));
+                }
+            }
+        }
+        byte[] png = BartenderManager.preview(templatePath.trim(), params, dpi, null);
+        if (png == null) {
+            response.put("success", false);
+            response.put("message", "BarTender 预览渲染失败（请确认已安装 BarTender 且模板有效）");
+        } else {
+            response.put("success", true);
+            response.put("image", Base64.getEncoder().encodeToString(png));
+        }
+        conn.send(JSON.toJSONString(response));
     }
 
     // ========== 辅助方法 ==========

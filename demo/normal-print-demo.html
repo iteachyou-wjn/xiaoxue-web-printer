@@ -79,6 +79,7 @@
       <div class="tabs">
         <div class="tab active" data-tab="text" onclick="switchTab('text')">文本</div>
         <div class="tab" data-tab="html" onclick="switchTab('html')">HTML</div>
+        <div class="tab" data-tab="bartender" onclick="switchTab('bartender')">BarTender</div>
       </div>
 
       <div class="tab-panel active" data-panel="text">
@@ -127,6 +128,34 @@
 &lt;/html&gt;</textarea>
         </div>
         <div class="hint">HTML 片段将完整渲染，内联样式保留；也支持 base64 / http(s) 图片。</div>
+      </div>
+
+      <div class="tab-panel" data-panel="bartender">
+        <div class="form-item full">
+          <label>BarTender 模板路径 (.btw)</label>
+          <input id="btTemplate" placeholder="如：D:\labels\mylabel.btw">
+        </div>
+        <div class="form-item full" style="margin-top:12px;">
+          <label>模板字段 (JSON，可选)</label>
+          <textarea id="btParams" style="min-height:120px" placeholder='如：{"字段1":"值1","字段2":"值2"}'>{&quot;字段1&quot;:&quot;值1&quot;,&quot;字段2&quot;:&quot;值2&quot;}</textarea>
+        </div>
+
+        <div class="form-item full" style="margin-top:16px;">
+          <div class="actions" style="flex-wrap:wrap;">
+            <button class="btn btn-primary" id="btnBtInstance">获取 BarTender 实例</button>
+            <button class="btn btn-success" id="btnBtParams">获取模板参数</button>
+            <button class="btn btn-success" id="btnBtImage">获取模板图像</button>
+            <button class="btn btn-success" id="btnBtImageWithParams">获取带参数模板图像</button>
+          </div>
+        </div>
+
+        <div class="form-item full" style="margin-top:12px;">
+          <div id="btInstanceInfo" class="hint">（点击「获取 BarTender 实例」查看版本信息）</div>
+          <div id="btParamsResult" class="hint" style="margin-top:8px;">（模板参数将显示在这里）</div>
+          <img id="btPreviewImg" style="display:none;max-width:100%;margin-top:10px;border:1px solid #e5e6eb;border-radius:6px;background:#fff;">
+        </div>
+
+        <div class="hint">预览/打印时将直接调用本机 BarTender 渲染或打印该模板。</div>
       </div>
     </div>
 
@@ -284,28 +313,32 @@
 
     // ---------- 构造请求 ----------
     function buildRequest() {
-      var isHtml = activeTab === 'html';
-      return {
-        printer: $('printerSelect').value,
-        style: {
-          paper: $('paperSelect').value,
-          direction: $('directionSelect').value,
-          margin: {
-            top: +$('marginTop').value || 0,
-            right: +$('marginRight').value || 0,
-            bottom: +$('marginBottom').value || 0,
-            left: +$('marginLeft').value || 0
-          },
-          zoom: +$('zoom').value || 1,
-          fontFamily: $('fontFamily').value,
-          fontSize: +$('fontSize').value || 12,
-          paperHeader: $('paperHeader').value,
-          paperFooter: $('paperFooter').value
+      var style = {
+        paper: $('paperSelect').value,
+        direction: $('directionSelect').value,
+        margin: {
+          top: +$('marginTop').value || 0,
+          right: +$('marginRight').value || 0,
+          bottom: +$('marginBottom').value || 0,
+          left: +$('marginLeft').value || 0
         },
-        content: isHtml
-          ? { type: 'html', value: $('htmlContent').value }
-          : { type: 'text', value: $('textContent').value }
+        zoom: +$('zoom').value || 1,
+        fontFamily: $('fontFamily').value,
+        fontSize: +$('fontSize').value || 12,
+        paperHeader: $('paperHeader').value,
+        paperFooter: $('paperFooter').value
       };
+      var content;
+      if (activeTab === 'bartender') {
+        var params = {};
+        try { params = JSON.parse($('btParams').value || '{}'); } catch (e) { params = {}; }
+        content = { type: 'bartender', value: $('btTemplate').value, params: params };
+      } else if (activeTab === 'html') {
+        content = { type: 'html', value: $('htmlContent').value };
+      } else {
+        content = { type: 'text', value: $('textContent').value };
+      }
+      return { printer: $('printerSelect').value, style: style, content: content };
     }
 
     // ---------- 预览 / 打印 ----------
@@ -321,6 +354,69 @@
       sdk.doPrint(buildRequest())
         .then(function (r) { log('打印任务已提交，任务ID: ' + r.taskId, 'success'); })
         .catch(function (e) { log('打印失败: ' + e.message, 'error'); });
+    });
+
+    // ---------- BarTender 实例示例 ----------
+    var btInstance = null;
+
+    function showBtImage(base64) {
+      var img = $('btPreviewImg');
+      if (base64) {
+        img.src = 'data:image/png;base64,' + base64;
+        img.style.display = 'block';
+      } else {
+        img.style.display = 'none';
+      }
+    }
+
+    $('btnBtInstance').addEventListener('click', function () {
+      log('获取 BarTender 实例...', 'info');
+      sdk.getBartenderInstance().then(function (bt) {
+        btInstance = bt;
+        $('btInstanceInfo').textContent = 'BarTender 可用: ' + bt.available
+          + '，版本: ' + (bt.version || '未知')
+          + (bt.fullVersion ? '，完整信息: ' + bt.fullVersion : '');
+        log('获取 BarTender 实例成功: 版本=' + (bt.version || '未知'), 'success');
+      }).catch(function (e) { log('获取 BarTender 实例失败: ' + e.message, 'error'); });
+    });
+
+    $('btnBtParams').addEventListener('click', function () {
+      var path = $('btTemplate').value;
+      if (!path) { log('请先填写模板路径', 'warn'); return; }
+      if (!btInstance) { log('请先点击「获取 BarTender 实例」', 'warn'); return; }
+      log('获取模板参数: ' + path, 'info');
+      btInstance.getTemplateParams(path).then(function (r) {
+        var list = r.params || [];
+        var parts = list.map(function (it) {
+          return it.name + ' (' + it.type + ')';
+        });
+        $('btParamsResult').textContent = '模板参数: ' + (parts.length ? parts.join(', ') : '（无）');
+        log('获取模板参数成功: ' + (parts.length ? parts.join(', ') : '（无）'), 'success');
+      }).catch(function (e) { log('获取模板参数失败: ' + e.message, 'error'); });
+    });
+
+    $('btnBtImage').addEventListener('click', function () {
+      var path = $('btTemplate').value;
+      if (!path) { log('请先填写模板路径', 'warn'); return; }
+      if (!btInstance) { log('请先点击「获取 BarTender 实例」', 'warn'); return; }
+      log('获取模板图像: ' + path, 'info');
+      btInstance.getTemplateImage(path).then(function (r) {
+        showBtImage(r.image);
+        log('获取模板图像成功', 'success');
+      }).catch(function (e) { log('获取模板图像失败: ' + e.message, 'error'); });
+    });
+
+    $('btnBtImageWithParams').addEventListener('click', function () {
+      var path = $('btTemplate').value;
+      if (!path) { log('请先填写模板路径', 'warn'); return; }
+      if (!btInstance) { log('请先点击「获取 BarTender 实例」', 'warn'); return; }
+      var params = {};
+      try { params = JSON.parse($('btParams').value || '{}'); } catch (e) { params = {}; }
+      log('获取带参数模板图像: ' + path, 'info');
+      btInstance.getTemplateImageWithParams(path, params).then(function (r) {
+        showBtImage(r.image);
+        log('获取带参数模板图像成功', 'success');
+      }).catch(function (e) { log('获取带参数模板图像失败: ' + e.message, 'error'); });
     });
 
     // ---------- SDK 事件 ----------

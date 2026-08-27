@@ -109,8 +109,9 @@
       <div class="tabs">
         <div class="tab" :class="{active: activeTab==='text'}" @click="activeTab='text'">文本</div>
         <div class="tab" :class="{active: activeTab==='html'}" @click="activeTab='html'">HTML</div>
+        <div class="tab" :class="{active: activeTab==='task'}" @click="activeTab='task'">打印任务</div>
+        <div class="tab" :class="{active: activeTab==='bartender'}" @click="activeTab='bartender'">BarTender</div>
         <div class="tab" :class="{active: activeTab==='code'}" @click="activeTab='code'">集成代码</div>
-        <div class="tab" :class="{active: activeTab==='task'}" @click="activeTab='task'">任务</div>
       </div>
 
       <div v-show="activeTab==='text'">
@@ -173,7 +174,24 @@ function doPrint() {
           <li><code>doPrint(json)</code> - 提交并执行打印任务</li>
           <li><code>doPreview(json)</code> - 打开打印预览窗口</li>
           <li><code>getTaskList / getTaskStatus / cancelTask / clearTasks</code> - 任务管理</li>
+          <li><code>getBartenderInstance()</code> - 获取 BarTender 实例（含版本号）</li>
         </ol>
+
+        <h3>四、BarTender 集成</h3>
+        <pre>// 获取 BarTender 实例（含版本号）
+const bt = await sdk.getBartenderInstance()
+console.log(bt.available, bt.version, bt.fullVersion)
+
+// 获取模板参数（含控件类型：Barcode/Text/Picture 等）
+const p = await bt.getTemplateParams('D:\\labels\\a.btw')
+// p.params =&gt; [{ name: 'barcode1', type: 'Barcode' }]
+
+// 获取模板图像（返回 base64）
+const img = await bt.getTemplateImage('D:\\labels\\a.btw')
+// img.image =&gt; base64 字符串，可直接 new Image() 使用
+
+// 获取带参数模板图像
+const img2 = await bt.getTemplateImageWithParams('D:\\labels\\a.btw', { 字段1: '值1' })</pre>
       </div>
 
       <div v-show="activeTab==='task'" class="code-block">
@@ -227,6 +245,29 @@ function clearDone() { sdk.clearTasks().then(r =&gt; console.log(r.message)) }
           <li><code>FAILED</code> - 失败（可通过 <code>errorMessage</code> 查看原因）</li>
         </ol>
       </div>
+
+      <div v-show="activeTab==='bartender'">
+        <div class="form-item full">
+          <label>BarTender 模板路径 (.btw)</label>
+          <input v-model="btTemplate" placeholder="如：D:\labels\mylabel.btw">
+        </div>
+        <div class="form-item full" style="margin-top:12px;">
+          <label>模板字段 (JSON，可选)</label>
+          <textarea v-model="btParamsText" placeholder='如：{"字段1":"值1","字段2":"值2"}' style="min-height:120px;"></textarea>
+        </div>
+        <div class="actions" style="margin-top:16px;flex-wrap:wrap;">
+          <button class="btn btn-primary" :disabled="!connected" @click="getBtInstance">获取 BarTender 实例</button>
+          <button class="btn btn-success" :disabled="!connected" @click="btGetParams">获取模板参数</button>
+          <button class="btn btn-success" :disabled="!connected" @click="btGetImage">获取模板图像</button>
+          <button class="btn btn-success" :disabled="!connected" @click="btGetImageWithParams">获取带参数模板图像</button>
+        </div>
+        <div class="hint" style="margin-top:12px;">{{ btInstanceInfo }}</div>
+        <div class="hint" style="margin-top:8px;">{{ btParamsResult }}</div>
+        <div style="margin-top:10px;" v-if="btPreviewImg">
+          <img :src="btPreviewImg" style="max-width:100%;border:1px solid #e5e6eb;border-radius:6px;background:#fff;">
+        </div>
+        <div class="hint" style="margin-top:12px;">预览/打印时将直接调用本机 BarTender 渲染或打印该模板。</div>
+      </div>
     </div>
 
     <div class="log">
@@ -258,6 +299,12 @@ function clearDone() { sdk.clearTasks().then(r =&gt; console.log(r.message)) }
           margins: { top: 1, right: 1, bottom: 1, left: 1 },
           paperHeader: '',
           paperFooter: '',
+          btTemplate: '',
+          btParamsText: '',
+          btInstance: null,
+          btInstanceInfo: '（点击「获取 BarTender 实例」查看版本信息）',
+          btParamsResult: '（模板参数将显示在这里）',
+          btPreviewImg: '',
           logs: []
         };
       },
@@ -328,6 +375,50 @@ function clearDone() { sdk.clearTasks().then(r =&gt; console.log(r.message)) }
           this.sdk.doPrint(this.buildRequest())
             .then(function (r) { vm.log('打印任务已提交，任务ID: ' + r.taskId, 'success'); })
             .catch(function (e) { vm.log('打印失败: ' + e.message, 'error'); });
+        },
+        getBtInstance: function () {
+          var vm = this;
+          this.log('获取 BarTender 实例...', 'info');
+          this.sdk.getBartenderInstance().then(function (bt) {
+            vm.btInstance = bt;
+            vm.btInstanceInfo = 'BarTender 可用: ' + bt.available + '，版本: ' + (bt.version || '未知')
+              + (bt.fullVersion ? '，完整信息: ' + bt.fullVersion : '');
+            vm.log('获取 BarTender 实例成功: 版本=' + (bt.version || '未知'), 'success');
+          }).catch(function (e) { vm.log('获取 BarTender 实例失败: ' + e.message, 'error'); });
+        },
+        btGetParams: function () {
+          var vm = this;
+          if (!this.btTemplate) { this.log('请先填写模板路径', 'warn'); return; }
+          if (!this.btInstance) { this.log('请先点击「获取 BarTender 实例」', 'warn'); return; }
+          this.btInstance.getTemplateParams(this.btTemplate).then(function (r) {
+            var list = r.params || [];
+            var parts = list.map(function (it) { return it.name + ' (' + it.type + ')'; });
+            vm.btParamsResult = '模板参数: ' + (parts.length ? parts.join(', ') : '（无）');
+            vm.log('获取模板参数成功: ' + (parts.length ? parts.join(', ') : '（无）'), 'success');
+          }).catch(function (e) { vm.log('获取模板参数失败: ' + e.message, 'error'); });
+        },
+        btGetImage: function () {
+          var vm = this;
+          if (!this.btTemplate) { this.log('请先填写模板路径', 'warn'); return; }
+          if (!this.btInstance) { this.log('请先点击「获取 BarTender 实例」', 'warn'); return; }
+          this.btInstance.getTemplateImage(this.btTemplate).then(function (r) {
+            vm.showBtImage(r.image);
+            vm.log('获取模板图像成功', 'success');
+          }).catch(function (e) { vm.log('获取模板图像失败: ' + e.message, 'error'); });
+        },
+        btGetImageWithParams: function () {
+          var vm = this;
+          if (!this.btTemplate) { this.log('请先填写模板路径', 'warn'); return; }
+          if (!this.btInstance) { this.log('请先点击「获取 BarTender 实例」', 'warn'); return; }
+          var params = {};
+          try { params = JSON.parse(this.btParamsText || '{}'); } catch (e) { params = {}; }
+          this.btInstance.getTemplateImageWithParams(this.btTemplate, params).then(function (r) {
+            vm.showBtImage(r.image);
+            vm.log('获取带参数模板图像成功', 'success');
+          }).catch(function (e) { vm.log('获取带参数模板图像失败: ' + e.message, 'error'); });
+        },
+        showBtImage: function (base64) {
+          this.btPreviewImg = base64 ? 'data:image/png;base64,' + base64 : '';
         }
       }
     }).mount('#app');

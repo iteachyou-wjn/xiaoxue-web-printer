@@ -3,6 +3,7 @@ package cc.iteachyou.printservice.ui;
 import cc.iteachyou.printservice.print.HtmlRenderService;
 import cc.iteachyou.printservice.print.PaperSizeUtil;
 import cc.iteachyou.printservice.print.PrintTaskExecutor;
+import cc.iteachyou.printservice.print.bartender.BartenderManager;
 import cc.iteachyou.printservice.util.AppIcons;
 import cc.iteachyou.printservice.websocket.PrintTask;
 import cc.iteachyou.printservice.websocket.PrintWebSocketServer;
@@ -42,10 +43,13 @@ import org.slf4j.LoggerFactory;
 import javax.imageio.ImageIO;
 import java.awt.image.BufferedImage;
 import java.awt.print.PrinterJob;
+import java.io.ByteArrayInputStream;
 import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 /**
  * 打印预览窗体（方案 B：OpenHTMLtoPDF 渲染）
@@ -312,21 +316,32 @@ public class PreviewDialog {
         JSONObject style = currentStyle();
         Thread t = new Thread(() -> {
             try {
-                PDDocument doc = HtmlRenderService.render(style, content);
-                List<BufferedImage> imgs = new ArrayList<>();
-                for (int i = 0; i < doc.getNumberOfPages(); i++) {
-                    imgs.add(HtmlRenderService.renderPageImage(doc, i, HtmlRenderService.PREVIEW_DPI));
+                PDDocument doc = null;
+                List<BufferedImage> imgs;
+                String ctype = content != null ? content.getString("type") : null;
+                if ("bartender".equalsIgnoreCase(ctype)) {
+                    // BarTender 类型：渲染模板图片作为预览
+                    imgs = renderBartenderImages();
+                } else {
+                    doc = HtmlRenderService.render(style, content);
+                    imgs = new ArrayList<>();
+                    for (int i = 0; i < doc.getNumberOfPages(); i++) {
+                        imgs.add(HtmlRenderService.renderPageImage(doc, i, HtmlRenderService.PREVIEW_DPI));
+                    }
                 }
+                final PDDocument fdoc = doc;
                 display.asyncExec(() -> {
                     if (shell == null || shell.isDisposed()) {
-                        try {
-                            doc.close();
-                        } catch (IOException ignored) {
+                        if (fdoc != null) {
+                            try {
+                                fdoc.close();
+                            } catch (IOException ignored) {
+                            }
                         }
                         return;
                     }
                     disposeRenderedDoc();
-                    renderedDoc = doc;
+                    renderedDoc = fdoc;
                     disposePageImagesSwt();
                     pageImagesAwt.clear();
                     pageImagesAwt.addAll(imgs);
@@ -356,6 +371,63 @@ public class PreviewDialog {
         }, "preview-render");
         t.setDaemon(true);
         t.start();
+    }
+
+    /**
+     * 渲染 BarTender 模板为预览图片（单页）。
+     * 使用 {@link BartenderManager#preview} 生成 PNG，再解码为 {@link BufferedImage}。
+     *
+     * @return 预览图片列表（通常为 1 页）
+     * @throws IOException BarTender 不可用或渲染失败时抛出
+     */
+    private List<BufferedImage> renderBartenderImages() throws IOException {
+        List<BufferedImage> imgs = new ArrayList<>();
+        if (content == null) {
+            return imgs;
+        }
+        String template = content.getString("value");
+        byte[] png = BartenderManager.preview(template, bartenderParams(), HtmlRenderService.PREVIEW_DPI, printerName);
+        if (png == null) {
+            throw new IOException("BarTender 预览渲染失败（本机可能未安装 BarTender 或模板无效）");
+        }
+        BufferedImage bi = ImageIO.read(new ByteArrayInputStream(png));
+        if (bi == null) {
+            log.warn("BarTender 预览图片解码失败，PNG 字节数={}", png.length);
+            throw new IOException("BarTender 预览图片解码失败");
+        }
+        // 诊断：统计非白像素，判断模板是否渲染出内容
+        int w = bi.getWidth(), h = bi.getHeight();
+        int colored = 0;
+        for (int y = 0; y < h; y++) {
+            for (int x = 0; x < w; x++) {
+                int rgb = bi.getRGB(x, y);
+                int r = (rgb >> 16) & 0xFF, g = (rgb >> 8) & 0xFF, b = rgb & 0xFF;
+                if (!(r > 250 && g > 250 && b > 250)) {
+                    colored++;
+                }
+            }
+        }
+        log.info("BarTender 预览图片 {}x{}, 非白像素={}, PNG 字节数={}", w, h, colored, png.length);
+        if (colored == 0) {
+            log.warn("BarTender 预览图片为全白空白，请检查模板内容、字段赋值或数据库连接");
+        }
+        imgs.add(bi);
+        return imgs;
+    }
+
+    /**
+     * 从 content.params 提取 BarTender 模板字段值。
+     */
+    private Map<String, String> bartenderParams() {
+        Map<String, String> params = new HashMap<>();
+        JSONObject p = content != null ? content.getJSONObject("params") : null;
+        if (p != null) {
+            for (String key : p.keySet()) {
+                Object v = p.get(key);
+                params.put(key, v == null ? "" : String.valueOf(v));
+            }
+        }
+        return params;
     }
 
     // ================= 渲染 loading 覆盖层 =================
@@ -581,8 +653,28 @@ public class PreviewDialog {
 
     // ================= 绘制 =================
 
+    /** 是否 BarTender 类型预览 */
+    private boolean isBartender() {
+        return content != null && "bartender".equalsIgnoreCase(content.getString("type"));
+    }
+
+    /**
+     * 实际纸张尺寸（pt）。
+     * BarTender 类型：按导出图片的实际像素（DPI300）换算为物理尺寸，
+     * 使预览与模板真实标签尺寸、比例一致；其他类型用标准纸张规格。
+     */
+    private double[] effectivePaperSize() {
+        if (isBartender() && !pageImagesAwt.isEmpty()) {
+            BufferedImage bi = pageImagesAwt.get(0);
+            double wPt = bi.getWidth() / 300.0 * 72.0;
+            double hPt = bi.getHeight() / 300.0 * 72.0;
+            return new double[]{ wPt, hPt };
+        }
+        return PaperSizeUtil.sizeOfOrDefault(paper);
+    }
+
     private void paintPage(GC gc, int availWidth, int availHeight) {
-        double[] size = PaperSizeUtil.sizeOfOrDefault(paper);
+        double[] size = effectivePaperSize();
         // 预留标尺条空间（上、左各 RULER_SIZE）
         int wArea = availWidth - RULER_SIZE;
         int hArea = availHeight - RULER_SIZE;
@@ -811,7 +903,7 @@ public class PreviewDialog {
      * 当前实际显示比例：适应窗口时取窗口内的真实缩放比，否则为固定缩放因子
      */
     private double currentScale() {
-        double[] size = PaperSizeUtil.sizeOfOrDefault(paper);
+        double[] size = effectivePaperSize();
         if (fitWindow) {
             if (canvas == null || canvas.isDisposed()) {
                 return zoomFactor > 0 ? zoomFactor : 1;

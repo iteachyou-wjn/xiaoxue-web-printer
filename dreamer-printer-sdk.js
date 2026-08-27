@@ -393,10 +393,105 @@
       return this._ensureConnected().then(() =>
         this._request(Object.assign({}, json, { type: 'doPreview' }), 'doPreview_result'));
     }
+
+    // ================= BarTender =================
+
+    /**
+     * 获取 BarTender 实例（需通过 SDK 实例调用；未连接时自动连接）。
+     * 返回的实例对象包含 BarTender 软件版本号等信息，并提供模板参数 / 图像获取能力。
+     *
+     * @returns {Promise<Bartender>} 包含 version / fullVersion / available 等信息的 Bartender 实例
+     */
+    getBartenderInstance() {
+      return this._ensureConnected().then(() =>
+        this._request({ type: 'bartenderInstance' }, 'bartenderInstance_result'))
+        .then((info) => new Bartender(this, info));
+    }
+  }
+
+  /**
+   * BarTender 实例对象。
+   * 通过 {@link DreamerPrinterSDK#getBartenderInstance()} 获取。
+   *
+   * 实例属性（来自服务端 BarTender 实例信息）：
+   *  - available   : boolean   BarTender 是否可用
+   *  - version     : string    版本号
+   *  - fullVersion : string    完整版本信息
+   */
+  class Bartender {
+    /**
+     * @private
+     * @param {DreamerPrinterSDK} sdk SDK 实例
+     * @param {Object} info BarTender 实例信息
+     */
+    constructor(sdk, info = {}) {
+      this._sdk = sdk;
+      this.info = info || {};
+      this.available = this.info.available === true;
+      this.version = this.info.version || null;
+      this.fullVersion = this.info.fullVersion || null;
+    }
+
+    /**
+     * 刷新 BarTender 实例信息（版本号等）。
+     * @returns {Promise<Object>} bartenderInstance_result { success, available, version, fullVersion, message }
+     */
+    refresh() {
+      return this._sdk._ensureConnected().then(() =>
+        this._sdk._request({ type: 'bartenderInstance' }, 'bartenderInstance_result'))
+        .then((info) => {
+          this.info = info || {};
+          this.available = this.info.available === true;
+          this.version = this.info.version || null;
+          this.fullVersion = this.info.fullVersion || null;
+          return info;
+        });
+    }
+
+    /**
+     * 获取模板参数（参数名 + 控件类型）。
+     * @param {string} templatePath BarTender 模板路径（.btw）
+     * @returns {Promise<Object>} bartenderTemplateParams_result
+     *   { success, templatePath, params: [{ name, type }] }
+     *   type 为控件类型（ObjectType 粒度）：Barcode / Text / Picture / RichText / RFID 等，
+     *   条码不细分（QRCode/Code128 均返回 Barcode）。
+     */
+    getTemplateParams(templatePath) {
+      return this._sdk._ensureConnected().then(() =>
+        this._sdk._request({ type: 'bartenderTemplateParams', templatePath }, 'bartenderTemplateParams_result'));
+    }
+
+    /**
+     * 获取模板图像（无参数），返回 base64 图片。
+     * @param {string} templatePath BarTender 模板路径（.btw）
+     * @param {number} [dpi=300] 渲染分辨率
+     * @returns {Promise<Object>} bartenderTemplateImage_result { success, templatePath, image: <base64> }
+     */
+    getTemplateImage(templatePath, dpi = 300) {
+      return this._sdk._ensureConnected().then(() =>
+        this._sdk._request(
+          { type: 'bartenderTemplateImage', templatePath, dpi },
+          'bartenderTemplateImage_result'));
+    }
+
+    /**
+     * 获取带参数的模板预览图像（base64）。
+     * @param {string} templatePath BarTender 模板路径（.btw）
+     * @param {Object} [params={}] 模板字段值
+     * @param {number} [dpi=300] 渲染分辨率
+     * @returns {Promise<Object>} bartenderTemplateImageWithParams_result { success, templatePath, image: <base64> }
+     */
+    getTemplateImageWithParams(templatePath, params = {}, dpi = 300) {
+      return this._sdk._ensureConnected().then(() =>
+        this._sdk._request(
+          { type: 'bartenderTemplateImageWithParams', templatePath, params, dpi },
+          'bartenderTemplateImageWithParams_result'));
+    }
   }
 
   // 导出（浏览器挂到全局 / Node 用 module.exports）
   global.DreamerPrinterSDK = DreamerPrinterSDK;
+  global.Bartender = Bartender;
   if (typeof module !== 'undefined' && module.exports) {
     module.exports = DreamerPrinterSDK;
   }
