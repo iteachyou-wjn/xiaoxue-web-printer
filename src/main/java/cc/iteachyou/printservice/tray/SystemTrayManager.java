@@ -4,6 +4,7 @@ import cc.iteachyou.printservice.MainApp;
 import cc.iteachyou.printservice.ui.AboutDialog;
 import cc.iteachyou.printservice.ui.LicenseDialog;
 import cc.iteachyou.printservice.ui.TaskListDialog;
+import cc.iteachyou.printservice.util.LicenseManager;
 import cc.iteachyou.printservice.util.MachineCode;
 import org.eclipse.swt.SWT;
 import org.eclipse.swt.graphics.Image;
@@ -95,6 +96,10 @@ public class SystemTrayManager {
             autoStartItem.setImage(isAutoStartEnabled() ? cbOn : cbOff);
         });
 
+        // 菜单项：授权状态（只读，弹出菜单时刷新）
+        MenuItem licenseStatusItem = new MenuItem(popupMenu, SWT.NONE);
+        licenseStatusItem.setEnabled(false);
+
         // 菜单项：授权许可（关于之前）
         MenuItem licenseItem = new MenuItem(popupMenu, SWT.PUSH);
         licenseItem.setText("授权许可");
@@ -120,6 +125,7 @@ public class SystemTrayManager {
         trayItem.addListener(SWT.MenuDetect, e -> {
             if (!popupMenu.isDisposed()) {
                 autoStartItem.setImage(isAutoStartEnabled() ? cbOn : cbOff);
+                licenseStatusItem.setText(licenseStatusText());
                 popupMenu.setVisible(true);
             }
         });
@@ -163,6 +169,27 @@ public class SystemTrayManager {
             dialog.show();
         } catch (Exception ex) {
             log.error("显示授权许可对话框失败", ex);
+        }
+    }
+
+    /**
+     * 生成托盘菜单中的授权时间文字（弹出菜单时调用）
+     */
+    private String licenseStatusText() {
+        LicenseManager.LicenseInfo info = LicenseManager.getStatus();
+        switch (info.status) {
+            case VALID:
+                return "授权时间：至 " + info.expire;
+            case NOT_LICENSED:
+                return "授权时间：未授权";
+            case EXPIRED:
+                return "授权时间：已过期";
+            case MACHINE_MISMATCH:
+                return "授权时间：机器码不匹配";
+            case INVALID:
+                return "授权时间：授权码无效";
+            default:
+                return "授权时间：校验出错";
         }
     }
 

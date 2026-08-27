@@ -3,6 +3,7 @@ package cc.iteachyou.printservice.websocket;
 import cc.iteachyou.printservice.print.PrintTaskExecutor;
 import cc.iteachyou.printservice.print.bartender.BartenderManager;
 import cc.iteachyou.printservice.ui.PreviewDialog;
+import cc.iteachyou.printservice.util.LicenseManager;
 import com.alibaba.fastjson2.JSON;
 import com.alibaba.fastjson2.JSONException;
 import com.alibaba.fastjson2.JSONObject;
@@ -240,6 +241,13 @@ public class PrintWebSocketServer extends WebSocketServer {
         JSONObject content = request.getJSONObject("content");
         JSONObject style = request.containsKey("style") ? request.getJSONObject("style") : null;
 
+        try {
+            enforceLicense(style, content);
+        } catch (IllegalArgumentException e) {
+            sendError(conn, e.getMessage());
+            return;
+        }
+
         String taskId = doPrint(printer, style, content);
 
         // 返回提交结果
@@ -263,6 +271,7 @@ public class PrintWebSocketServer extends WebSocketServer {
      * @return 任务 ID
      */
     public String doPrint(String printer, JSONObject style, JSONObject content) {
+        enforceLicense(style, content);
         String value = (content != null && content.getString("value") != null)
                 ? content.getString("value") : "";
         PrintTask task = new PrintTask(makeTaskName(value), value, printer);
@@ -329,6 +338,13 @@ public class PrintWebSocketServer extends WebSocketServer {
             return;
         }
 
+        try {
+            enforceLicense(style, content);
+        } catch (IllegalArgumentException e) {
+            sendError(conn, e.getMessage());
+            return;
+        }
+
         String previewId = computePreviewId(request);
         PreviewDialog existing = previewWindows.get(previewId);
         if (existing != null && !existing.isDisposed()) {
@@ -348,6 +364,40 @@ public class PrintWebSocketServer extends WebSocketServer {
         response.put("previewId", previewId);
         response.put("message", "打印预览已打开");
         conn.send(JSON.toJSONString(response));
+    }
+
+    /**
+     * 授权策略：
+     * <ul>
+     *   <li>未授权时 BarTender 功能不可用，抛异常拒绝；</li>
+     *   <li>未授权时 text/html 打印强制使用试用版页头页尾；</li>
+     *   <li>已授权时页头页尾保持用户设置（不设置时默认为空）。</li>
+     * </ul>
+     */
+    private void enforceLicense(JSONObject style, JSONObject content) {
+        String ctype = content != null ? content.getString("type") : null;
+        if ("bartender".equalsIgnoreCase(ctype)) {
+            if (!LicenseManager.isAuthorized()) {
+                throw new IllegalArgumentException("未授权，BarTender 功能不可用，请联系作者购买授权");
+            }
+            return;
+        }
+        // text / html：未授权时强制试用版页头页尾
+        if (!LicenseManager.isAuthorized() && style != null) {
+            style.put("paperHeader", "梦想家WEB打印控件试用版");
+            style.put("paperFooter", "梦想家WEB打印控件试用版");
+        }
+    }
+
+    /**
+     * BarTender 功能授权检查；未授权时发送错误并返回 false
+     */
+    private boolean requireBartender(WebSocket conn) {
+        if (!LicenseManager.isAuthorized()) {
+            sendError(conn, "未授权，BarTender 功能不可用，请联系作者购买授权");
+            return false;
+        }
+        return true;
     }
 
     /**
@@ -547,6 +597,9 @@ public class PrintWebSocketServer extends WebSocketServer {
      *   → { "type": "bartenderInstance_result", success, available, version, fullVersion, message }
      */
     private void handleBartenderInstance(WebSocket conn) {
+        if (!requireBartender(conn)) {
+            return;
+        }
         JSONObject response = new JSONObject();
         response.put("type", "bartenderInstance_result");
         boolean available = BartenderManager.isAvailable();
@@ -566,6 +619,9 @@ public class PrintWebSocketServer extends WebSocketServer {
      *   → { "type": "bartenderTemplateParams_result", success, templatePath, params: [...] }
      */
     private void handleBartenderTemplateParams(WebSocket conn, JSONObject request) {
+        if (!requireBartender(conn)) {
+            return;
+        }
         String templatePath = request.getString("templatePath");
         JSONObject response = new JSONObject();
         response.put("type", "bartenderTemplateParams_result");
@@ -587,6 +643,9 @@ public class PrintWebSocketServer extends WebSocketServer {
      * { "type": "bartenderTemplateImageWithParams", "templatePath": "...", "params": {...}, "dpi": 300 }
      */
     private void handleBartenderTemplateImage(WebSocket conn, JSONObject request, boolean withParams) {
+        if (!requireBartender(conn)) {
+            return;
+        }
         String respType = withParams
                 ? "bartenderTemplateImageWithParams_result"
                 : "bartenderTemplateImage_result";
