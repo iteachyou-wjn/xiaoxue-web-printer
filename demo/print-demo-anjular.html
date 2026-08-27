@@ -252,6 +252,25 @@ getTemplateImage(path: string) {
 getTemplateImageWithParams(path: string, params: any) {
   return this.getBartender().then(bt =&gt; bt.getTemplateImageWithParams(path, params));
 }</pre>
+
+      <h2>BarTender 打印 / 预览</h2>
+      <p>提交打印或预览时，将 <code>content.type</code> 设为 <code>'bartender'</code>，服务端将调用本机 BarTender 渲染/打印模板：</p>
+      <pre>// app.component.ts
+private buildBartenderRequest() {
+  const params = JSON.parse(this.btParamsText || '{}');
+  return {
+    printer: this.printer,
+    style: { paper: 'A4', direction: 'vertical' },
+    content: {
+      type: 'bartender',          // 关键：BarTender 类型
+      value: this.btTemplate,     // 模板路径 .btw
+      params: params              // 模板字段值
+    }
+  };
+}
+
+doPreview() { this.print.preview(this.buildBartenderRequest()); }  // 打印预览
+doPrint()   { this.print.print(this.buildBartenderRequest()); }    // 执行打印</pre>
     </div>
   </div>
 

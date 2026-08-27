@@ -333,7 +333,8 @@ methods: {
         },
         buildRequest: function () {
           var isHtml = this.activeTab === 'html';
-          return {
+          var isBt = this.activeTab === 'bartender';
+          var base = {
             printer: this.printer,
             style: {
               paper: this.paper,
@@ -347,11 +348,18 @@ methods: {
               fontSize: this.fontSize || 12,
               paperHeader: this.paperHeader,
               paperFooter: this.paperFooter
-            },
-            content: isHtml
-              ? { type: 'html', value: this.htmlContent }
-              : { type: 'text', value: this.content }
+            }
           };
+          if (isBt) {
+            var params = {};
+            try { params = JSON.parse(this.btParamsText || '{}'); } catch (e) { params = {}; }
+            base.content = { type: 'bartender', value: this.btTemplate, params: params };
+            return base;
+          }
+          base.content = isHtml
+            ? { type: 'html', value: this.htmlContent }
+            : { type: 'text', value: this.content };
+          return base;
         },
         preview: function () {
           var vm = this;

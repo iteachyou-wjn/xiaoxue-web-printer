@@ -135,16 +135,24 @@
 
       const buildRequest = function () {
         const isHtml = activeTab === 'html';
-        return {
+        const isBt = activeTab === 'bartender';
+        const base = {
           printer: printer,
           style: {
             paper: paper, direction: direction,
             margin: { top: margins.top || 0, right: margins.right || 0, bottom: margins.bottom || 0, left: margins.left || 0 },
             zoom: zoom || 1, fontFamily: fontFamily, fontSize: fontSize || 12,
             paperHeader: paperHeader, paperFooter: paperFooter
-          },
-          content: isHtml ? { type: 'html', value: htmlContent } : { type: 'text', value: content }
+          }
         };
+        if (isBt) {
+          let params = {};
+          try { params = JSON.parse(btParamsText || '{}'); } catch (e) { params = {}; }
+          base.content = { type: 'bartender', value: btTemplate, params: params };
+          return base;
+        }
+        base.content = isHtml ? { type: 'html', value: htmlContent } : { type: 'text', value: content };
+        return base;
       };
 
       const onPreview = function () {
