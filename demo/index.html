@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>梦想家WEB打印控件 - Demo 首页</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: "Microsoft YaHei", "PingFang SC", sans-serif;
+      background: #f0f2f5;
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .container { max-width: 720px; width: 100%; padding: 40px 24px; }
+    .brand { text-align: center; margin-bottom: 40px; }
+    .brand h1 { font-size: 26px; color: #1f2329; margin-bottom: 10px; }
+    .brand p { color: #8a919f; font-size: 14px; }
+    .cards { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+    .section-title {
+      font-size: 13px; color: #8a919f; margin: 30px 0 14px; text-align: center; letter-spacing: 2px;
+    }
+    .section-title::before, .section-title::after { content: '——'; color: #d9dce0; margin: 0 10px; }
+    .card {
+      background: #fff;
+      border-radius: 12px;
+      padding: 32px 24px;
+      text-decoration: none;
+      color: #1f2329;
+      border: 1px solid #e5e6eb;
+      transition: all .2s;
+      display: block;
+    }
+    .card:hover { border-color: #3370ff; box-shadow: 0 6px 20px rgba(51,112,255,.15); transform: translateY(-2px); }
+    .card .icon { font-size: 32px; margin-bottom: 12px; }
+    .card h2 { font-size: 18px; margin-bottom: 8px; }
+    .card p { font-size: 13px; color: #8a919f; line-height: 1.6; }
+    .footer { text-align: center; margin-top: 40px; color: #c0c4cc; font-size: 12px; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="brand">
+      <h1>🖨️ 梦想家WEB打印控件</h1>
+      <p>通过 WebSocket 与本机打印服务通信，请在运行服务后使用以下示例</p>
+    </div>
+    <div class="section-title">基础示例</div>
+    <div class="cards">
+      <a class="card" href="normal-print-demo.html">
+        <div class="icon">📄</div>
+        <h2>普通打印示例</h2>
+        <p>文本 / HTML 打印二合一：输入文本或 HTML 片段，设置纸张 / 边距 / 字体等样式，实现预览与打印。</p>
+      </a>
+    </div>
+
+    <div class="section-title">框架集成示例</div>
+    <div class="cards">
+      <a class="card" href="print-demo-vue2.html">
+        <div class="icon">🟢</div>
+        <h2>Vue2 打印示例</h2>
+        <p>Vue 2.x Options API 集成，CDN 单页即可运行体验。</p>
+      </a>
+      <a class="card" href="print-demo-vue3.html">
+        <div class="icon">🟢</div>
+        <h2>Vue3 打印示例</h2>
+        <p>Vue 3 createApp 集成，CDN 单页即可运行体验。</p>
+      </a>
+      <a class="card" href="print-demo-react.html">
+        <div class="icon">⚛️</div>
+        <h2>React 打印示例</h2>
+        <p>React 18 + Hooks 集成，CDN + Babel 单页运行。</p>
+      </a>
+      <a class="card" href="print-demo-anjular.html">
+        <div class="icon">🔴</div>
+        <h2>Angular 打印示例</h2>
+        <p>Angular CLI 工程集成代码示例与接入步骤。</p>
+      </a>
+    </div>
+
+    <div class="footer">Dreamer Printer SDK · 需先启动「梦想家WEB打印控件」服务（127.0.0.1:54321）</div>
+  </div>
+</body>
+</html>

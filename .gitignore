@@ -29,8 +29,12 @@ desktop.ini
 *.log
 logs/
 
-# 打包产物
-build/
+# 打包产物（仅保留 build 下的 exe，其余忽略）
+build/app-image/
+build/input/
+build/libs/
+build/*.ico
+build/*.iss
 
 # 临时验证 / 临时文件
 _spike/

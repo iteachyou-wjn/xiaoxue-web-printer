@@ -9,7 +9,7 @@
 - **真实打印**：`doPrint` 将 text/html 渲染为 PDF，经 Java Print Service 输出
 - **打印预览**：`doPreview` 弹出分页预览（缩放、页面设置、导出 PDF/图片）
 - **任务列表**：托盘可查看进行中的打印任务
-- **浏览器 SDK**：`dreamer-printer-sdk.js`，演示页 `dreamer-printer-demo.html`
+- **浏览器 SDK**：`dreamer-printer-sdk.min.js`，演示页见 `demo/` 目录
 
 ## 技术栈
 
@@ -25,9 +25,15 @@
 ```
 dreamer-print-service/
 ├── pom.xml
-├── dreamer-printer-sdk.js             # 浏览器 / Node 客户端 SDK
-├── dreamer-printer-demo.html          # 完整演示页（样式 / 预览 / 打印）
-├── test-client.html                   # 精简 WebSocket 测试页
+├── dreamer-printer-sdk.min.js         # 浏览器 / Node 客户端 SDK（压缩混淆版）
+├── dreamer-printer-sdk.js             # 浏览器 / Node 客户端 SDK（源码）
+├── demo/                              # 演示页
+│   ├── index.html                     # Demo 首页（入口导航）
+│   ├── normal-print-demo.html         # 普通打印示例（文本 / HTML）
+│   ├── print-demo-vue2.html           # Vue2 集成示例
+│   ├── print-demo-vue3.html           # Vue3 集成示例
+│   ├── print-demo-react.html          # React 集成示例
+│   └── print-demo-anjular.html        # Angular 集成示例
 ├── README.md
 └── src/main/
     ├── java/cc/iteachyou/printservice/
@@ -137,7 +143,7 @@ copy build\libs\*.jar build\input\
 
 1. 直接运行绿色版 exe（或安装后启动），系统托盘出现应用图标；
 2. 命令行执行 `netstat -ano | findstr 54321`，应能看到监听；
-3. 用浏览器打开 `dreamer-printer-demo.html`，`DreamerPrinterSDK.getPrinters()` 能返回本机打印机列表。
+3. 用浏览器打开 `demo/index.html`（或 `demo/normal-print-demo.html`），`DreamerPrinterSDK.getPrinters()` 能返回本机打印机列表。
 
 ### 重新打包的完整命令序列
 
@@ -225,7 +231,7 @@ rem --- 第 5 步（ISCC）---
 </script>
 ```
 
-完整交互见 `dreamer-printer-demo.html`；精简调试见 `test-client.html`。
+完整交互见 `demo/index.html` 下的各示例页（`demo/normal-print-demo.html`、框架集成示例等）。
 
 ## 打印链路
 

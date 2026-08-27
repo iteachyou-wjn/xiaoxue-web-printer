@@ -19,12 +19,12 @@
  *   sdk.getPrinters().then(r => console.log(r.printers));
  *   sdk.getPageSize('Microsoft Print to PDF').then(r => console.log(r.sizes));
  *
- * 提交并执行打印任务（全局方法，无需实例）：
- *   DreamerPrinterSDK.doPrint({ style: {...}, printer: '...', content: { type: 'text', value: '...' } })
+ * 提交并执行打印任务（需通过 SDK 实例调用；未连接时自动连接）：
+ *   sdk.doPrint({ style: {...}, printer: '...', content: { type: 'text', value: '...' } })
  *     .then(r => console.log(r.taskId));
  *
- * 打开打印预览（全局方法，无需实例；参数同 doPrint）：
- *   DreamerPrinterSDK.doPreview({ style: {...}, printer: '...', content: { type: 'text', value: '...' } })
+ * 打开打印预览（需通过 SDK 实例调用；参数同 doPrint）：
+ *   sdk.doPreview({ style: {...}, printer: '...', content: { type: 'text', value: '...' } })
  *     .then(r => console.log(r.message));
  *
  * 使用方式（Node.js）：
@@ -359,7 +359,7 @@
     }
 
     /**
-     * 提交并执行打印任务（通过已建立的连接）
+     * 提交并执行打印任务（需通过 SDK 实例调用；未连接时自动连接）
      *
      * @param {Object} json 打印请求
      * @param {Object} [json.style] 打印样式
@@ -378,165 +378,22 @@
      * @returns {Promise<Object>} doPrint_result { success, taskId, message }
      */
     doPrint(json = {}) {
-      return this._request(
-        Object.assign({}, json, { type: 'doPrint' }),
-        'doPrint_result'
-      );
+      return this._ensureConnected().then(() =>
+        this._request(Object.assign({}, json, { type: 'doPrint' }), 'doPrint_result'));
     }
 
     /**
-     * 打开打印预览（通过已建立的连接；不打印，仅服务端弹窗展示）
+     * 打开打印预览（需通过 SDK 实例调用；未连接时自动连接；不打印，仅服务端弹窗展示）
      * 参数与 doPrint 相同。
      *
      * @param {Object} json 预览请求（结构同 doPrint）
      * @returns {Promise<Object>} doPreview_result { success, message }
      */
     doPreview(json = {}) {
-      return this._request(
-        Object.assign({}, json, { type: 'doPreview' }),
-        'doPreview_result'
-      );
+      return this._ensureConnected().then(() =>
+        this._request(Object.assign({}, json, { type: 'doPreview' }), 'doPreview_result'));
     }
   }
-
-  /**
-   * 全局静态方法：提交并执行打印任务
-   *
-   * 不需要创建 SDK 实例，内部自动建立一次性连接、发送指令并断开。
-   * 服务端收到指令后：创建打印任务 → 调用打印机执行打印 → 完成后清除任务。
-   *
-   * @param {Object} json 打印请求
-   * @param {Object} [json.style] 打印样式
-   * @param {Object} [json.style.margin] 页边距（cm）{ top, right, bottom, left }
-   * @param {number} [json.style.zoom=1] 缩放比例
-   * @param {string} [json.style.direction='vertical'] 方向：horizontal(横向) | vertical(纵向)
-   * @param {string} [json.style.paperHeader] 页头
-   * @param {string} [json.style.paperFooter] 页脚
-   * @param {string} [json.style.fontFamily='宋体'] 字体
-   * @param {number} [json.style.fontSize=12] 字号
-   * @param {string} [json.style.paper='A4'] 纸张
-   * @param {string} [json.printer='默认打印机'] 打印机名称
-   * @param {Object} [json.content] 打印内容
-   * @param {string} [json.content.type='text'] text | html
-   * @param {string} [json.content.value] 打印内容
-   * @param {Object} [options]
-   * @param {string} [options.url='ws://localhost:54321']  WebSocket 服务地址
-   * @param {number} [options.timeout=15000]              打印请求超时（毫秒）
-   * @param {number} [options.connectionTimeout=5000]     连接超时（毫秒）
-   * @returns {Promise<Object>} doPrint_result { success, taskId, message }
-   *
-   * @example
-   *   DreamerPrinterSDK.doPrint({
-   *     style: {
-   *       margin: { top: 1, right: 1, bottom: 1, left: 1 },
-   *       zoom: 1,
-   *       direction: 'vertical',
-   *       paperHeader: '销售报表',
-   *       paperFooter: '第 1 页',
-   *       fontFamily: '宋体',
-   *       fontSize: 12,
-   *       paper: 'A4'
-   *     },
-   *     printer: 'Microsoft Print to PDF',
-   *     content: { type: 'text', value: '打印内容' }
-   *   }).then(r => console.log('任务ID:', r.taskId));
-   */
-  DreamerPrinterSDK.doPrint = function (json, options = {}) {
-    return new Promise((resolve, reject) => {
-      const sdk = new DreamerPrinterSDK({
-        url: options.url || DEFAULT_URL,
-        autoReconnect: false,
-        connectionTimeout: options.connectionTimeout || 5000,
-      });
-
-      const timeout = options.timeout || 15000;
-      // 总超时兜底
-      const timer = setTimeout(() => {
-        sdk.disconnect();
-        reject(new Error('打印请求超时'));
-      }, timeout);
-
-      sdk.on('open', () => {
-        sdk.doPrint(json)
-          .then((res) => {
-            clearTimeout(timer);
-            sdk.disconnect();
-            resolve(res);
-          })
-          .catch((err) => {
-            clearTimeout(timer);
-            sdk.disconnect();
-            reject(err);
-          });
-      });
-
-      sdk.on('error', (e) => {
-        clearTimeout(timer);
-        sdk.disconnect();
-        reject(e || new Error('连接打印服务失败'));
-      });
-
-      sdk.connect();
-    });
-  };
-
-  /**
-   * 全局静态方法：打开打印预览
-   *
-   * 参数与 doPrint 相同，但服务端不执行打印，只弹出一个预览窗体展示内容。
-   *
-   * @param {Object} json 预览请求（结构同 doPrint）
-   * @param {Object} [options]
-   * @param {string} [options.url='ws://localhost:54321']  WebSocket 服务地址
-   * @param {number} [options.timeout=15000]              预览请求超时（毫秒）
-   * @param {number} [options.connectionTimeout=5000]     连接超时（毫秒）
-   * @returns {Promise<Object>} doPreview_result { success, message }
-   *
-   * @example
-   *   DreamerPrinterSDK.doPreview({
-   *     style: { margin: { top: 1, right: 1, bottom: 1, left: 1 }, paper: 'A4', fontFamily: '宋体', fontSize: 12 },
-   *     printer: 'Microsoft Print to PDF',
-   *     content: { type: 'text', value: '预览内容' }
-   *   }).then(r => console.log(r.message));
-   */
-  DreamerPrinterSDK.doPreview = function (json, options = {}) {
-    return new Promise((resolve, reject) => {
-      const sdk = new DreamerPrinterSDK({
-        url: options.url || DEFAULT_URL,
-        autoReconnect: false,
-        connectionTimeout: options.connectionTimeout || 5000,
-      });
-
-      const timeout = options.timeout || 15000;
-      // 总超时兜底
-      const timer = setTimeout(() => {
-        sdk.disconnect();
-        reject(new Error('打印预览请求超时'));
-      }, timeout);
-
-      sdk.on('open', () => {
-        sdk.doPreview(json)
-          .then((res) => {
-            clearTimeout(timer);
-            sdk.disconnect();
-            resolve(res);
-          })
-          .catch((err) => {
-            clearTimeout(timer);
-            sdk.disconnect();
-            reject(err);
-          });
-      });
-
-      sdk.on('error', (e) => {
-        clearTimeout(timer);
-        sdk.disconnect();
-        reject(e || new Error('连接打印服务失败'));
-      });
-
-      sdk.connect();
-    });
-  };
 
   // 导出（浏览器挂到全局 / Node 用 module.exports）
   global.DreamerPrinterSDK = DreamerPrinterSDK;

@@ -134,11 +134,16 @@ public final class HtmlRenderService {
 
         String header = style != null ? style.getString("paperHeader") : null;
         String footer = style != null ? style.getString("paperFooter") : null;
+        // 页眉页脚 margin boxes 需显式指定中文字体，否则 OpenHTMLtoPDF 用默认拉丁字体渲染，中文会乱码
         if (header != null && !header.isEmpty()) {
-            css.append("  @top-center { content: \"").append(cssQuote(header)).append("\"; }\n");
+            css.append("  @top-center { content: \"").append(cssQuote(header))
+                    .append("\"; font-family: '").append(family)
+                    .append("'; font-size: 9pt; }\n");
         }
         if (footer != null && !footer.isEmpty()) {
-            css.append("  @bottom-center { content: \"").append(cssQuote(footer)).append("\"; }\n");
+            css.append("  @bottom-center { content: \"").append(cssQuote(footer))
+                    .append("\"; font-family: '").append(family)
+                    .append("'; font-size: 9pt; }\n");
         }
         css.append("}\n");
 

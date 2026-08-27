@@ -1,0 +1,325 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Vue2 打印示例 - 梦想家WEB打印控件</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { font-family: "Microsoft YaHei","PingFang SC",sans-serif; background:#f0f2f5; color:#1f2329; padding:24px; }
+    .topbar { display:flex; align-items:center; justify-content:space-between; margin-bottom:20px; }
+    .topbar h1 { font-size:20px; }
+    .topbar a { color:#3370ff; text-decoration:none; font-size:13px; }
+    .conn { display:flex; align-items:center; gap:8px; font-size:13px; }
+    .dot { width:10px; height:10px; border-radius:50%; display:inline-block; }
+    .dot.on { background:#34c724; } .dot.off { background:#c0c4cc; }
+    .layout { display:grid; grid-template-columns:1.2fr 1fr; gap:20px; } /* 不再使用 */
+    .settings-grid { display:grid; grid-template-columns:repeat(6,1fr); gap:12px; margin-bottom:16px; }
+    .settings-grid .form-item { min-width:0; }
+    .settings-panel { margin-bottom:24px; }
+    .panel { background:#fff; border-radius:10px; padding:20px; border:1px solid #e5e6eb; }
+    .panel h2 { font-size:15px; margin-bottom:16px; border-bottom:1px solid #f0f1f3; padding-bottom:10px; }
+    .tabs { display:flex; gap:4px; border-bottom:2px solid #e5e6eb; margin-bottom:16px; }
+    .tab { padding:9px 18px; cursor:pointer; font-size:14px; color:#5a6068; border-bottom:2px solid transparent; margin-bottom:-2px; transition:all .15s; }
+    .tab:hover { color:#42b883; }
+    .tab.active { color:#42b883; border-bottom-color:#42b883; font-weight:600; }
+    .form-row { display:flex; gap:12px; margin-bottom:12px; flex-wrap:wrap; }
+    .form-item { flex:1; min-width:140px; }
+    .form-item label { display:block; font-size:12px; color:#8a919f; margin-bottom:5px; }
+    .form-item input,.form-item select,.form-item textarea { width:100%; padding:7px 10px; border:1px solid #d9dce0; border-radius:6px; font-size:13px; outline:none; }
+    .form-item input:focus,.form-item select:focus,.form-item textarea:focus { border-color:#42b883; }
+    .form-item textarea { resize:vertical; min-height:180px; font-family:Consolas,monospace; }
+    .form-item.full { flex:0 0 100%; }
+    .actions { display:flex; gap:12px; margin-top:4px; }
+    .btn { padding:9px 22px; border:none; border-radius:6px; font-size:14px; cursor:pointer; color:#fff; }
+    .btn-primary { background:#42b883; } .btn-primary:hover { background:#37a372; }
+    .btn-primary:disabled { background:#c0c4cc; cursor:not-allowed; }
+    .btn-success { background:#3370ff; } .btn-success:hover { background:#2b5fd6; }
+    .btn-success:disabled { background:#c0c4cc; cursor:not-allowed; }
+    .log { margin-top:20px; background:#1e1e1e; color:#d4d4d4; border-radius:8px; padding:12px; font-size:12px; font-family:Consolas,monospace; height:180px; overflow-y:auto; }
+    .log div { line-height:1.7; }
+    .log .info{color:#d4d4d4;} .log .success{color:#4ec950;} .log .error{color:#f0616d;} .log .warn{color:#d9a520;}
+    .hint { font-size:12px; color:#8a919f; margin-top:8px; }
+    .badge { display:inline-block; background:#e7f7f1; color:#42b883; font-size:12px; padding:2px 10px; border-radius:10px; margin-left:8px; }
+    [v-cloak] { display: none; }
+    .code-block h3 { font-size:14px; margin:14px 0 8px; color:#42b883; }
+    .code-block p { font-size:13px; color:#5a6068; line-height:1.8; margin-bottom:8px; }
+    .code-block ol { margin:6px 0 8px 20px; font-size:13px; color:#5a6068; line-height:1.9; }
+    .code-block pre { background:#1e1e1e; color:#d4d4d4; border-radius:8px; padding:14px; font-size:12px; font-family:Consolas,monospace; line-height:1.6; overflow-x:auto; margin:8px 0; }
+  </style>
+</head>
+<body>
+  <div id="app" v-cloak>
+    <div class="topbar">
+      <h1>🟢 Vue2 打印示例 <span class="badge">Vue 2.7</span></h1>
+      <div style="display:flex;align-items:center;gap:16px;">
+        <a href="index.html">← 返回首页</a>
+        <div class="conn"><span class="dot" :class="connected ? 'on' : 'off'"></span><span>{{ connected ? '已连接' : '未连接' }}</span></div>
+      </div>
+    </div>
+    <!-- 打印设置：tabs 上方，一行6列 -->
+    <div class="panel settings-panel">
+      <h2>打印设置</h2>
+      <div class="settings-grid">
+        <div class="form-item"><label>打印机</label>
+          <select v-model="printer" @change="loadPageSizes">
+            <option value="">请选择打印机</option>
+            <option v-for="p in printers" :key="p" :value="p">{{ p }}</option>
+          </select>
+        </div>
+        <div class="form-item"><label>纸张</label>
+          <select v-model="paper">
+            <option value="">请先选择打印机</option>
+            <option v-for="s in paperSizes" :key="s" :value="s">{{ s }}</option>
+          </select>
+        </div>
+        <div class="form-item"><label>方向</label>
+          <select v-model="direction">
+            <option value="vertical">纵向</option><option value="horizontal">横向</option>
+          </select>
+        </div>
+        <div class="form-item"><label>缩放比例</label>
+          <input v-model.number="zoom" type="number" step="0.1" min="0.1">
+        </div>
+        <div class="form-item"><label>字体</label>
+          <select v-model="fontFamily">
+            <option value="宋体">宋体</option><option value="微软雅黑">微软雅黑</option>
+            <option value="黑体">黑体</option><option value="楷体">楷体</option>
+            <option value="仿宋">仿宋</option><option value="Arial">Arial</option>
+          </select>
+        </div>
+        <div class="form-item"><label>字号</label>
+          <input v-model.number="fontSize" type="number" min="6" max="72">
+        </div>
+        <div class="form-item"><label>上(cm)</label><input v-model.number="margins.top" type="number" step="0.1"></div>
+        <div class="form-item"><label>右(cm)</label><input v-model.number="margins.right" type="number" step="0.1"></div>
+        <div class="form-item"><label>下(cm)</label><input v-model.number="margins.bottom" type="number" step="0.1"></div>
+        <div class="form-item"><label>左(cm)</label><input v-model.number="margins.left" type="number" step="0.1"></div>
+        <div class="form-item"><label>页头</label><input v-model="paperHeader" placeholder="如：销售报表"></div>
+        <div class="form-item"><label>页脚</label><input v-model="paperFooter" placeholder="如：第 {page} 页"></div>
+      </div>
+      <div class="actions">
+        <button class="btn btn-primary" :disabled="!connected" @click="preview">打印预览</button>
+        <button class="btn btn-success" :disabled="!connected" @click="doPrint">执行打印</button>
+      </div>
+    </div>
+
+    <!-- tabs + 内容 -->
+    <div class="panel">
+      <div class="tabs">
+        <div class="tab" :class="{active: activeTab==='text'}" @click="activeTab='text'">文本</div>
+        <div class="tab" :class="{active: activeTab==='html'}" @click="activeTab='html'">HTML</div>
+        <div class="tab" :class="{active: activeTab==='code'}" @click="activeTab='code'">集成代码</div>
+        <div class="tab" :class="{active: activeTab==='task'}" @click="activeTab='task'">任务</div>
+      </div>
+
+      <div v-show="activeTab==='text'">
+        <div class="form-item full">
+          <textarea v-model="content" placeholder="请输入要打印的文本内容..."></textarea>
+        </div>
+        <div class="hint">将以纯文本方式渲染，支持换行与空白字符。</div>
+      </div>
+
+      <div v-show="activeTab==='html'">
+        <div class="form-item full">
+          <textarea v-model="htmlContent" placeholder="请输入 HTML 片段，将保留样式渲染..." style="min-height:300px;"></textarea>
+        </div>
+        <div class="hint">HTML 片段完整渲染，支持内联样式 / base64 或 http(s) 图片。</div>
+      </div>
+
+      <div v-show="activeTab==='code'" class="code-block">
+        <h3>一、引入 SDK</h3>
+        <p>将 <code>dreamer-printer-sdk.min.js</code> 复制到项目，并在 <code>index.html</code> 或 <code>main.js</code> 中引入：</p>
+        <pre>&lt;script src="path/to/dreamer-printer-sdk.min.js"&gt;&lt;/script&gt;</pre>
+
+        <h3>二、在 Vue2 组件中使用</h3>
+        <pre>// 组件中
+created() {
+  this.sdk = new DreamerPrinterSDK({ url: 'ws://localhost:54321' });
+  this.sdk.on('open', () => {
+    this.connected = true;
+    this.fetchPrinters();
+  });
+  this.sdk.connect();
+},
+methods: {
+  // 获取打印机 / 纸张
+  fetchPrinters() {
+    this.sdk.getPrinters().then(r => { this.printers = r.printers; });
+  },
+  fetchPageSize(p) {
+    this.sdk.getPageSize(p).then(r => { this.paperSizes = r.sizes; });
+  },
+  // 打印
+  doPrint() {
+    this.sdk.doPrint({
+      printer: this.printer,
+      style: { paper: 'A4', direction: 'vertical', margin: {top:1,right:1,bottom:1,left:1}, fontSize: 12 },
+      content: { type: 'text', value: this.content }
+    }).then(r => console.log('任务ID:', r.taskId));
+  },
+  // 预览
+  doPreview() {
+    this.sdk.doPreview({ /* 参数同 doPrint */ });
+  }
+}</pre>
+
+        <h3>三、API 一览</h3>
+        <ol>
+          <li><code>getPrinters()</code> - 获取可用打印机</li>
+          <li><code>getPageSize(printerName)</code> - 获取指定打印机纸张</li>
+          <li><code>doPrint(json)</code> - 提交并执行打印任务</li>
+          <li><code>doPreview(json)</code> - 打开打印预览窗口</li>
+          <li><code>getTaskList / getTaskStatus / cancelTask / clearTasks</code> - 任务管理</li>
+        </ol>
+      </div>
+
+      <div v-show="activeTab==='task'" class="code-block">
+        <h3>一、任务管理 API</h3>
+        <p>以下接口均需通过 <code>DreamerPrinterSDK</code> 实例调用：</p>
+        <ol>
+          <li><code>getTaskList()</code> - 获取任务列表，返回 <code>{ tasks: [...] }</code></li>
+          <li><code>getTaskStatus(taskId)</code> - 查询单个任务状态，返回 <code>{ task?, found }</code></li>
+          <li><code>cancelTask(taskId)</code> - 取消「待打印 / 打印中」任务，返回 <code>{ success, message }</code></li>
+          <li><code>clearTasks()</code> - 清除「已完成 / 失败」任务，返回 <code>{ success, message }</code></li>
+          <li><code>doPrint(json)</code> - 提交并执行打印任务，返回 <code>{ success, taskId }</code></li>
+          <li><code>taskListUpdate</code> 事件 - 服务端在任务变化时主动推送任务列表</li>
+        </ol>
+
+        <h3>二、在 Vue2 中使用</h3>
+        <pre>// 组件中
+created() {
+  this.sdk = new DreamerPrinterSDK({ url: 'ws://localhost:54321' });
+  this.sdk.on('taskListUpdate', (list) => { this.tasks = list || []; });
+  this.sdk.on('open', this.refreshTasks);
+  this.sdk.connect();
+},
+methods: {
+  refreshTasks() {
+    this.sdk.getTaskList().then(r => { this.tasks = r.tasks || []; });
+  },
+  submitTask() {
+    this.sdk.doPrint({ printer: this.printer, style: { paper: 'A4' },
+      content: { type: 'text', value: this.content } })
+      .then(r => console.log('任务ID:', r.taskId));
+  },
+  cancelTask(id) { this.sdk.cancelTask(id).then(r => console.log(r.message)); },
+  clearDone() { this.sdk.clearTasks().then(r => console.log(r.message)); }
+}</pre>
+
+        <h3>三、任务状态说明</h3>
+        <ol>
+          <li><code>PENDING</code> - 待打印（可取消）</li>
+          <li><code>PRINTING</code> - 打印中（可取消）</li>
+          <li><code>COMPLETED</code> - 已完成</li>
+          <li><code>FAILED</code> - 失败（可通过 <code>errorMessage</code> 查看原因）</li>
+        </ol>
+      </div>
+    </div>
+
+    <div class="log">
+      <div v-for="(l, i) in logs" :key="i" :class="l.level">{{ l.text }}</div>
+    </div>
+  </div>
+
+  <script src="https://unpkg.com/vue@2.7.16/dist/vue.min.js"></script>
+  <script src="../dreamer-printer-sdk.min.js"></script>
+  <script>
+    var fmt = function (t) { return '[' + new Date().toLocaleTimeString('zh-CN', { hour12: false }) + '] '; };
+
+    new Vue({
+      el: '#app',
+      data: function () {
+        return {
+          sdk: null,
+          connected: false,
+          activeTab: 'text',
+          printers: [],
+          paperSizes: [],
+          content: '尊敬的客户：\n\n感谢您使用梦想家WEB打印控件（Vue2 集成示例）。\n\n通过 new DreamerPrinterSDK({ url }) 创建实例，即可调用打印服务。\n\n—— 梦想家技术团队',
+          htmlContent: '<h1 style="text-align:center;color:#42b883">Vue2 HTML 打印</h1>\n<p style="text-align:center;color:#888">HTML 片段完整渲染</p>\n<hr>\n<table border="1" cellspacing="0" cellpadding="6" style="width:100%;border-collapse:collapse;text-align:center">\n  <tr style="background:#42b883;color:#fff"><th>项目</th><th>数量</th><th>金额</th></tr>\n  <tr><td>打印机服务</td><td>1</td><td>1,200.00</td></tr>\n  <tr><td>技术服务</td><td>2</td><td>3,600.00</td></tr>\n</table>',
+          printer: '',
+          paper: '',
+          direction: 'vertical',
+          zoom: 1,
+          fontFamily: '宋体',
+          fontSize: 12,
+          margins: { top: 1, right: 1, bottom: 1, left: 1 },
+          paperHeader: '',
+          paperFooter: '',
+          logs: []
+        };
+      },
+      created: function () {
+        var vm = this;
+        this.sdk = new DreamerPrinterSDK({ url: 'ws://localhost:54321' });
+        this.sdk.on('open', function () {
+          vm.connected = true;
+          vm.log('已连接到打印服务', 'info');
+          vm.refreshPrinters();
+        });
+        this.sdk.on('close', function () { vm.connected = false; vm.log('连接已断开', 'warn'); });
+        this.sdk.on('error', function (e) { vm.log('连接错误: ' + (e && e.message || '未知'), 'error'); });
+        this.sdk.on('welcome', function (m) { vm.log('欢迎消息: ' + m.message + '（端口 ' + m.port + '）', 'info'); });
+        this.sdk.connect();
+      },
+      methods: {
+        log: function (msg, level) {
+          this.logs.push({ text: fmt() + msg, level: level || 'info' });
+        },
+        refreshPrinters: function () {
+          var vm = this;
+          this.sdk.getPrinters().then(function (r) {
+            vm.printers = r.printers || [];
+            vm.log('获取打印机成功: ' + vm.printers.join(', '), 'success');
+            if (vm.printers.length) { vm.printer = vm.printers[0]; vm.loadPageSizes(); }
+          }).catch(function (e) { vm.log('获取打印机失败: ' + e.message, 'error'); });
+        },
+        loadPageSizes: function () {
+          var vm = this;
+          if (!this.printer) return;
+          this.sdk.getPageSize(this.printer).then(function (r) {
+            vm.paperSizes = r.sizes || [];
+            vm.log('获取「' + vm.printer + '」纸张: ' + vm.paperSizes.join(', '), 'success');
+            if (vm.paperSizes.length) vm.paper = vm.paperSizes[0];
+          }).catch(function (e) { vm.log('获取纸张失败: ' + e.message, 'error'); });
+        },
+        buildRequest: function () {
+          var isHtml = this.activeTab === 'html';
+          return {
+            printer: this.printer,
+            style: {
+              paper: this.paper,
+              direction: this.direction,
+              margin: {
+                top: this.margins.top || 0, right: this.margins.right || 0,
+                bottom: this.margins.bottom || 0, left: this.margins.left || 0
+              },
+              zoom: this.zoom || 1,
+              fontFamily: this.fontFamily,
+              fontSize: this.fontSize || 12,
+              paperHeader: this.paperHeader,
+              paperFooter: this.paperFooter
+            },
+            content: isHtml
+              ? { type: 'html', value: this.htmlContent }
+              : { type: 'text', value: this.content }
+          };
+        },
+        preview: function () {
+          var vm = this;
+          this.sdk.doPreview(this.buildRequest())
+            .then(function (r) { vm.log('预览指令已发送: ' + (r.message || 'ok'), 'success'); })
+            .catch(function (e) { vm.log('预览失败: ' + e.message, 'error'); });
+        },
+        doPrint: function () {
+          var vm = this;
+          this.sdk.doPrint(this.buildRequest())
+            .then(function (r) { vm.log('打印任务已提交，任务ID: ' + r.taskId, 'success'); })
+            .catch(function (e) { vm.log('打印失败: ' + e.message, 'error'); });
+        }
+      }
+    });
+  </script>
+</body>
+</html>
