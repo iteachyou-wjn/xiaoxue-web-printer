@@ -35,7 +35,6 @@ build/input/
 build/libs/
 build/*.ico
 build/*.iss
-build/tools/
 
 # 临时验证 / 临时文件
 _spike/
