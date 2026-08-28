@@ -412,7 +412,8 @@ public final class BartenderManager {
     }
 
     /** 将整数 DPI 映射到 SDK 的 Resolution 枚举 */
-    private static Resolution resolveDpi(int dpi) {
+    @SuppressWarnings("unused")
+	private static Resolution resolveDpi(int dpi) {
         if (dpi <= 75) {
             return Resolution.DPI75;
         }

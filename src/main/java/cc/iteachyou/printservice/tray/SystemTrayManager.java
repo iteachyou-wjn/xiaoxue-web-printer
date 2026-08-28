@@ -6,6 +6,7 @@ import cc.iteachyou.printservice.ui.LicenseDialog;
 import cc.iteachyou.printservice.ui.TaskListDialog;
 import cc.iteachyou.printservice.util.LicenseManager;
 import cc.iteachyou.printservice.util.MachineCode;
+import cc.iteachyou.printservice.util.VersionUtil;
 import org.eclipse.swt.SWT;
 import org.eclipse.swt.graphics.Image;
 import org.eclipse.swt.graphics.ImageData;
@@ -99,6 +100,11 @@ public class SystemTrayManager {
         // 菜单项：授权状态（只读，弹出菜单时刷新）
         MenuItem licenseStatusItem = new MenuItem(popupMenu, SWT.NONE);
         licenseStatusItem.setEnabled(false);
+
+        // 菜单项：版本号（只读）
+        MenuItem versionItem = new MenuItem(popupMenu, SWT.NONE);
+        versionItem.setEnabled(false);
+        versionItem.setText("版本：" + VersionUtil.getVersion());
 
         // 菜单项：授权许可（关于之前）
         MenuItem licenseItem = new MenuItem(popupMenu, SWT.PUSH);

@@ -1,13 +1,17 @@
 package cc.iteachyou.printservice.ui;
 
-import cc.iteachyou.printservice.print.HtmlRenderService;
-import cc.iteachyou.printservice.print.PaperSizeUtil;
-import cc.iteachyou.printservice.print.PrintTaskExecutor;
-import cc.iteachyou.printservice.print.bartender.BartenderManager;
-import cc.iteachyou.printservice.util.AppIcons;
-import cc.iteachyou.printservice.websocket.PrintTask;
-import cc.iteachyou.printservice.websocket.PrintWebSocketServer;
-import com.alibaba.fastjson2.JSONObject;
+import java.awt.image.BufferedImage;
+import java.awt.print.PrinterJob;
+import java.io.ByteArrayInputStream;
+import java.io.File;
+import java.io.IOException;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+
+import javax.imageio.ImageIO;
+
 import org.apache.pdfbox.pdmodel.PDDocument;
 import org.eclipse.swt.SWT;
 import org.eclipse.swt.events.SelectionAdapter;
@@ -17,7 +21,6 @@ import org.eclipse.swt.graphics.Font;
 import org.eclipse.swt.graphics.GC;
 import org.eclipse.swt.graphics.Image;
 import org.eclipse.swt.graphics.ImageData;
-import org.eclipse.swt.graphics.ImageLoader;
 import org.eclipse.swt.graphics.PaletteData;
 import org.eclipse.swt.graphics.RGB;
 import org.eclipse.swt.graphics.Rectangle;
@@ -31,25 +34,24 @@ import org.eclipse.swt.widgets.Display;
 import org.eclipse.swt.widgets.FileDialog;
 import org.eclipse.swt.widgets.Label;
 import org.eclipse.swt.widgets.ProgressBar;
+import org.eclipse.swt.widgets.ScrollBar;
 import org.eclipse.swt.widgets.Shell;
 import org.eclipse.swt.widgets.Spinner;
-import org.eclipse.swt.widgets.ScrollBar;
 import org.eclipse.swt.widgets.Text;
 import org.eclipse.swt.widgets.ToolBar;
 import org.eclipse.swt.widgets.ToolItem;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import javax.imageio.ImageIO;
-import java.awt.image.BufferedImage;
-import java.awt.print.PrinterJob;
-import java.io.ByteArrayInputStream;
-import java.io.File;
-import java.io.IOException;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import com.alibaba.fastjson2.JSONObject;
+
+import cc.iteachyou.printservice.print.HtmlRenderService;
+import cc.iteachyou.printservice.print.PaperSizeUtil;
+import cc.iteachyou.printservice.print.PrintTaskExecutor;
+import cc.iteachyou.printservice.print.bartender.BartenderManager;
+import cc.iteachyou.printservice.util.AppIcons;
+import cc.iteachyou.printservice.websocket.PrintTask;
+import cc.iteachyou.printservice.websocket.PrintWebSocketServer;
 
 /**
  * 打印预览窗体（方案 B：OpenHTMLtoPDF 渲染）

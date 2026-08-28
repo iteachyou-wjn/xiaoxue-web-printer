@@ -1,19 +1,17 @@
 package cc.iteachyou.printservice.ui;
 
-import cc.iteachyou.printservice.MainApp;
-import cc.iteachyou.printservice.util.AppIcons;
 import org.eclipse.swt.SWT;
-import org.eclipse.swt.events.SelectionAdapter;
-import org.eclipse.swt.events.SelectionEvent;
 import org.eclipse.swt.graphics.Color;
 import org.eclipse.swt.graphics.Font;
 import org.eclipse.swt.graphics.FontData;
 import org.eclipse.swt.layout.GridData;
 import org.eclipse.swt.layout.GridLayout;
-import org.eclipse.swt.widgets.Button;
 import org.eclipse.swt.widgets.Display;
 import org.eclipse.swt.widgets.Label;
 import org.eclipse.swt.widgets.Shell;
+
+import cc.iteachyou.printservice.MainApp;
+import cc.iteachyou.printservice.util.AppIcons;
 
 /**
  * 关于对话框（SWT 实现）
@@ -36,9 +34,9 @@ public class AboutDialog {
     }
 
     private void createShell() {
-        shell = new Shell(display, SWT.SHELL_TRIM);
+        shell = new Shell(display, SWT.SHELL_TRIM & ~SWT.RESIZE);
         shell.setText("关于打印控件");
-        shell.setSize(520, 400);
+        shell.setSize(560, 400);
         shell.setLayout(new GridLayout(1, false));
         AppIcons.applyTo(shell);
 
@@ -53,7 +51,7 @@ public class AboutDialog {
 
         // 版本号
         Label versionLabel = new Label(shell, SWT.CENTER);
-        versionLabel.setText("版本 1.0.0");
+        versionLabel.setText("版本 " + cc.iteachyou.printservice.util.VersionUtil.getVersion());
         versionLabel.setForeground(new Color(display, 127, 140, 141));
         versionLabel.setLayoutData(new GridData(SWT.CENTER, SWT.CENTER, true, false));
 
@@ -98,19 +96,8 @@ public class AboutDialog {
 
         // 版权信息
         Label copyrightLabel = new Label(shell, SWT.CENTER);
-        copyrightLabel.setText("© 2024 梦想家打印控件. All rights reserved.");
+        copyrightLabel.setText("© 2024 梦想家WEB打印控件. All rights reserved.");
         copyrightLabel.setForeground(new Color(display, 149, 165, 166));
         copyrightLabel.setLayoutData(new GridData(SWT.CENTER, SWT.CENTER, true, false));
-
-        // 关闭按钮
-        Button closeBtn = new Button(shell, SWT.PUSH);
-        closeBtn.setText("关闭");
-        closeBtn.setLayoutData(new GridData(SWT.CENTER, SWT.CENTER, false, false));
-        closeBtn.addSelectionListener(new SelectionAdapter() {
-            @Override
-            public void widgetSelected(SelectionEvent e) {
-                shell.close();
-            }
-        });
     }
 }

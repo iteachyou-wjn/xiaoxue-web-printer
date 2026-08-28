@@ -41,6 +41,7 @@ public class LicenseDialog {
      */
     public void show() {
         createShell();
+        shell.setSize(720, 500); // 固定尺寸 720 x 500
         shell.open();
         org.eclipse.swt.graphics.Rectangle displayBounds =
                 display.getPrimaryMonitor().getClientArea();
