@@ -27,9 +27,32 @@ public final class LicenseManager {
 
     private static final Logger log = LoggerFactory.getLogger(LicenseManager.class);
 
-    /** 内置公钥（X.509 Base64），与授权工具 private_key.pem 配套。私钥变化需同步更新此值。 */
-    public static final String PUBLIC_KEY_BASE64 =
-            "MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEA1w+tUWvy59Rw8vj8korqGRmO1eZl4B7Ub9RTylFbiLn8ik2Gmbh+tsgrLlgjliTUTnmco10qQlt3FszKX2TWUjILN9r8W7qMWr4T9o6ks36Cdg70/hSxCqygJGn+Q6B/lAWUTumwEf4n1LqljjgbZLxsMqTRDdmszbeYit9p2YkRmIJie/km0Jmj1c029nVGa0dxxC5XvyIeWcnxRvuiNlF6+hRjBY/TrYvvyoBUl1Cex8v8xQ3wSQvvePHzAZuz8AU8JascKngb0BdYTwsY5fESs7PkzRt8M0r5AmAVz+phlVVkUKYcmpNJGW2X+Ks4D6e9tmFa5E4itXGwy6c3GwIDAQAB";
+    /**
+     * 内置公钥以"拆段异或"形式存储，运行时还原，提高反编译直接提取的难度。
+     * 说明：公钥本身公开安全（仅能验签、不能伪造授权码），此仅为提高逆向门槛；
+     * 真正的安全根基是私钥不外泄（私钥仅存于授权工具项目中）。
+     */
+    private static final byte[][] KEY_PARTS = {
+        {23, 19, 19, 24, 19, 48, 27, 20, 24, 61, 49, 43, 50, 49, 51, 29, 99, 45, 106, 24, 27, 11, 31, 28, 27, 27, 21, 25, 27, 11, 98, 27, 23, 19, 19, 24, 25, 61, 17, 25, 27, 11, 31, 27, 107, 45, 113, 46, 15, 13, 44, 35, 111, 99, 8, 45, 98, 44, 48, 98, 49, 53, 40, 43, 29, 8, 55, 21, 107, 63, 0, 54, 110, 24, 109, 15, 56, 99, 8, 14, 35, 54, 28, 56, 51, 22, 52, 98, 51, 49, 104, 29, 55, 56, 50, 113, 46, 41, },
+        {12, 25, 39, 7, 12, 1, 7, 2, 63, 62, 63, 5, 6, 8, 4, 90, 91, 26, 58, 7, 31, 88, 45, 24, 17, 32, 51, 89, 63, 60, 62, 1, 34, 39, 37, 82, 25, 83, 60, 92, 26, 38, 60, 25, 95, 63, 82, 4, 93, 0, 24, 88, 93, 40, 15, 12, 92, 91, 68, 3, 56, 19, 40, 26, 18, 12, 33, 44, 5, 64, 58, 93, 41, 68, 7, 42, 60, 62, 63, 30, 6, 28, 46, 13, 95, 5, 90, 39, 26, 7, 1, 1, 12, 9, 49, 39, 19, 24, },
+        {126, 66, 103, 97, 119, 87, 94, 64, 73, 81, 86, 106, 90, 71, 10, 67, 1, 106, 88, 97, 94, 122, 121, 90, 86, 28, 88, 94, 3, 121, 94, 89, 2, 80, 3, 1, 10, 93, 101, 116, 82, 3, 87, 75, 75, 112, 6, 107, 69, 74, 122, 86, 100, 80, 93, 75, 97, 69, 70, 90, 125, 95, 117, 5, 24, 91, 97, 89, 113, 106, 28, 103, 65, 106, 69, 69, 74, 92, 113, 102, 95, 2, 112, 86, 75, 11, 69, 11, 75, 98, 0, 68, 96, 98, 69, 69, 86, 99, },
+        {53, 7, 60, 39, 8, 7, 69, 60, 40, 69, 55, 28, 14, 30, 54, 19, 26, 31, 77, 63, 25, 36, 41, 10, 14, 36, 72, 27, 56, 46, 14, 74, 45, 22, 7, 47, 9, 69, 48, 77, 15, 72, 60, 16, 60, 43, 7, 86, 13, 21, 17, 43, 43, 22, 40, 54, 36, 30, 16, 13, 51, 55, 58, 42, 79, 37, 86, 54, 14, 73, 57, 75, 24, 68, 9, 16, 59, 28, 72, 56, 73, 20, 9, 37, 58, 10, 4, 75, 30, 78, 58, 10, 52, 57, 60, 44, 60, 63, },
+    };
+
+    private static final byte[] KEYS = {0x5A, 0x6B, 0x33, 0x7D};
+
+    /** 运行时还原公钥（X.509 Base64） */
+    private static String buildPublicKey() {
+        StringBuilder sb = new StringBuilder();
+        for (int i = 0; i < KEY_PARTS.length; i++) {
+            byte[] part = KEY_PARTS[i];
+            byte key = KEYS[i];
+            for (byte b : part) {
+                sb.append((char) ((b ^ key) & 0xFF));
+            }
+        }
+        return sb.toString();
+    }
 
     /** 授权状态 */
     public enum Status {
@@ -196,7 +219,7 @@ public final class LicenseManager {
     }
 
     private static PublicKey publicKey() throws Exception {
-        byte[] der = Base64.getDecoder().decode(PUBLIC_KEY_BASE64);
+        byte[] der = Base64.getDecoder().decode(buildPublicKey());
         return KeyFactory.getInstance("RSA").generatePublic(new X509EncodedKeySpec(der));
     }
 

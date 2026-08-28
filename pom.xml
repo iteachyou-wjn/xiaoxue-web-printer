@@ -6,7 +6,7 @@
 
     <groupId>com.dreamer</groupId>
     <artifactId>dreamer-print-service</artifactId>
-    <version>1.0.2</version>
+    <version>1.0.3</version>
     <packaging>jar</packaging>
 
     <name>Dreamer Print Service</name>
