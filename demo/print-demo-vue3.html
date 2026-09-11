@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Vue3 打印示例 - 梦想家WEB打印控件</title>
+  <title>Vue3 打印示例 - 晓雪WEB打印控件</title>
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
     body { font-family: "Microsoft YaHei","PingFang SC",sans-serif; background:#f0f2f5; color:#1f2329; padding:24px; }
@@ -130,8 +130,8 @@
 
       <div v-show="activeTab==='code'" class="code-block">
         <h3>一、引入 SDK</h3>
-        <p>将 <code>dreamer-printer-sdk.min.js</code> 复制到项目，并在 <code>index.html</code> 中引入：</p>
-        <pre>&lt;script src="path/to/dreamer-printer-sdk.min.js"&gt;&lt;/script&gt;</pre>
+        <p>将 <code>xiaoxue-printer-sdk.min.js</code> 复制到项目，并在 <code>index.html</code> 中引入：</p>
+        <pre>&lt;script src="path/to/xiaoxue-printer-sdk.min.js"&gt;&lt;/script&gt;</pre>
 
         <h3>二、在 Vue3 组件中使用（组合式 API）</h3>
         <pre>// App.vue  setup() 中
@@ -276,7 +276,7 @@ function clearDone() { sdk.clearTasks().then(r =&gt; console.log(r.message)) }
   </div>
 
   <script src="https://unpkg.com/vue@3.4.31/dist/vue.global.prod.js"></script>
-  <script src="../dreamer-printer-sdk.min.js"></script>
+  <script src="../xiaoxue-printer-sdk.min.js"></script>
   <script>
     var fmt = function (t) { return '[' + new Date().toLocaleTimeString('zh-CN', { hour12: false }) + '] '; };
 
@@ -288,7 +288,7 @@ function clearDone() { sdk.clearTasks().then(r =&gt; console.log(r.message)) }
           activeTab: 'text',
           printers: [],
           paperSizes: [],
-          content: '尊敬的客户：\n\n感谢您使用梦想家WEB打印控件（Vue3 集成示例）。\n\n通过 new DreamerPrinterSDK({ url }) 创建实例，即可调用打印服务。\n\n—— 梦想家技术团队',
+          content: '尊敬的客户：\n\n感谢您使用晓雪WEB打印控件（Vue3 集成示例）。\n\n通过 new DreamerPrinterSDK({ url }) 创建实例，即可调用打印服务。\n\n—— 梦想家技术团队',
           htmlContent: '<h1 style="text-align:center;color:#42b883">Vue3 HTML 打印</h1>\n<p style="text-align:center;color:#888">HTML 片段完整渲染</p>\n<hr>\n<table border="1" cellspacing="0" cellpadding="6" style="width:100%;border-collapse:collapse;text-align:center">\n  <tr style="background:#42b883;color:#fff"><th>项目</th><th>数量</th><th>金额</th></tr>\n  <tr><td>打印机服务</td><td>1</td><td>1,200.00</td></tr>\n  <tr><td>技术服务</td><td>2</td><td>3,600.00</td></tr>\n</table>',
           printer: '',
           paper: '',

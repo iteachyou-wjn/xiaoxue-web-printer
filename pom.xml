@@ -6,7 +6,7 @@
 
     <groupId>cc.iteachyou</groupId>
     <artifactId>dreamer-print-service</artifactId>
-    <version>1.0.3</version>
+    <version>1.0.4</version>
     <packaging>jar</packaging>
 
     <name>Dreamer Print Service</name>

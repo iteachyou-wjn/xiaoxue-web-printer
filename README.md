@@ -2,7 +2,7 @@
 
 # Dreamer Print Service
 
-**梦想家 WEB 打印控件 — 浏览器里的本地打印，一行 SDK 全搞定**
+**晓雪 WEB 打印控件 — 浏览器里的本地打印，一行 SDK 全搞定**
 
 ![Version](https://img.shields.io/badge/version-1.0.3-blue)
 
@@ -36,14 +36,14 @@
 | 📋 **任务管理**          | 任务列表 / 状态查询 / 取消 / 清除，状态变化实时广播 `task_list_update`                                   |
 | 🔒 **仅本机监听**         | WebSocket 只绑定回环地址，不对局域网暴露                                                           |
 | 🔐 **离线授权**          | 机器码 + RSA 非对称签名授权码，绑定设备与有效期                                                         |
-| 🧩 **多框架 SDK**       | `dreamer-printer-sdk.js` 零依赖，自动重连，Promise 化 API；提供 Vue2 / Vue3 / React / Angular 演示 |
+| 🧩 **多框架 SDK**       | `xiaoxue-printer-sdk.js` 零依赖，自动重连，Promise 化 API；提供 Vue2 / Vue3 / React / Angular 演示 |
 | 📦 **一键打包**          | 一条命令产出自带 JRE 的 Windows 安装包（ProGuard 混淆 + jpackage + Inno Setup）                     |
 
 ## 工作原理
 
 ```mermaid
 flowchart LR
-    SDK["浏览器页面<br/>dreamer-printer-sdk.js"]
+    SDK["浏览器页面<br/>xiaoxue-printer-sdk.js"]
     WS["WebSocket Server<br/>127.0.0.1:54321"]
     RENDER["HtmlRenderService<br/>HTML 转 PDF"]
     BT["BartenderManager<br/>.btw 模板"]
@@ -172,10 +172,10 @@ demo/index.html
 
 ## 浏览器 SDK
 
-`dreamer-printer-sdk.js`（另有压缩版 `.min.js`）零依赖，浏览器直接引入或 Node.js `require` 均可：
+`xiaoxue-printer-sdk.js`（另有压缩版 `.min.js`）零依赖，浏览器直接引入或 Node.js `require` 均可：
 
 ```html
-<script src="dreamer-printer-sdk.js"></script>
+<script src="xiaoxue-printer-sdk.js"></script>
 <script>
   const sdk = new DreamerPrinterSDK({
     url: 'ws://127.0.0.1:54321',  // 默认值
@@ -263,7 +263,7 @@ build\打包.bat
 
 脚本（`build/build.ps1`）会自动完成：版本号同步（pom / iss / proguard）→ ProGuard 混淆 → 复制依赖 → jpackage 生成自带 JRE 的绿色版 → Inno Setup 产出安装包。
 
-产物：`build\windows-梦想家WEB打印控件-<版本>-x86_64.exe`
+产物：`build\windows-晓雪WEB打印控件-<版本>-x86_64.exe`
 
 ### 手动打包（STS 视角）
 
@@ -276,7 +276,7 @@ build\打包.bat
 3. **准备输入**：瘦 jar 重命名后与全部依赖 jar 一起放入 `build\input`
 4. **jpackage**：
    ```bat
-   jpackage --type app-image --name 梦想家WEB打印控件 --app-version x.y.z --vendor iteachyou ^
+   jpackage --type app-image --name 晓雪WEB打印控件 --app-version x.y.z --vendor iteachyou ^
      --input build\input --main-jar dreamer-print-service-x.y.z.jar ^
      --main-class cc.iteachyou.printservice.MainApp ^
      --icon build\dreamer-print.ico --dest build\app-image
@@ -315,8 +315,8 @@ SWT 按平台区分 artifactId，替换 `pom.xml` 中的依赖即可：
 ```
 dreamer-print-service/
 ├── pom.xml                              # Maven 构建配置（shade 打 fat jar）
-├── dreamer-printer-sdk.js               # 浏览器 / Node 客户端 SDK（源码）
-├── dreamer-printer-sdk.min.js           # SDK 压缩混淆版
+├── xiaoxue-printer-sdk.js               # 浏览器 / Node 客户端 SDK（源码）
+├── xiaoxue-printer-sdk.min.js           # SDK 压缩混淆版
 ├── demo/                                # 演示页（入口导航 + 四大框架示例）
 │   ├── index.html
 │   ├── normal-print-demo.html           # 普通打印 + BarTender 示例

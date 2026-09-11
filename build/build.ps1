@@ -1,7 +1,7 @@
 ﻿# ============================================================
-#  梦想家WEB打印控件 - 一键打包脚本
+#  晓雪WEB打印控件 - 一键打包脚本
 #  用法: 双击 打包.bat (或直接运行本脚本)，按提示输入版本号
-#  例如输入 1.0.4 -> 产出 build\windows-梦想家WEB打印控件-1.0.4-x86_64.exe
+#  例如输入 1.0.4 -> 产出 build\windows-晓雪WEB打印控件-1.0.4-x86_64.exe
 # ============================================================
 
 param([string]$Version)
@@ -101,7 +101,7 @@ Rename-Item $obfJar "dreamer-print-service-$Version.jar"
 Write-Host "[5/6] jpackage 生成 app-image ..."
 $appImage = Join-Path $PSScriptRoot 'app-image'
 Remove-Item -Recurse -Force $appImage -ErrorAction SilentlyContinue
-& $jpackage --type app-image --name "梦想家WEB打印控件" --app-version $Version --vendor iteachyou `
+& $jpackage --type app-image --name "晓雪WEB打印控件" --app-version $Version --vendor iteachyou `
     --input $inputDir --main-jar "dreamer-print-service-$Version.jar" `
     --main-class cc.iteachyou.printservice.MainApp `
     --icon (Join-Path $PSScriptRoot 'dreamer-print.ico') --dest $appImage
@@ -115,6 +115,6 @@ if ($LASTEXITCODE -ne 0) { throw 'Inno Setup 编译失败' }
 # ---------- 完成 ----------
 Write-Host ""
 Write-Host "打包完成！" -ForegroundColor Green
-Write-Host "安装包: build\windows-梦想家WEB打印控件-$Version-x86_64.exe" -ForegroundColor Green
+Write-Host "安装包: build\windows-晓雪WEB打印控件-$Version-x86_64.exe" -ForegroundColor Green
 Write-Host ""
 Read-Host '按回车键退出'

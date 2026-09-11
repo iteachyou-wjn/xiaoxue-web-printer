@@ -96,7 +96,7 @@ public class AboutDialog {
 
         // 版权信息
         Label copyrightLabel = new Label(shell, SWT.CENTER);
-        copyrightLabel.setText("© 2024 梦想家WEB打印控件. All rights reserved.");
+        copyrightLabel.setText("© 2024 晓雪WEB打印控件. All rights reserved.");
         copyrightLabel.setForeground(new Color(display, 149, 165, 166));
         copyrightLabel.setLayoutData(new GridData(SWT.CENTER, SWT.CENTER, true, false));
     }

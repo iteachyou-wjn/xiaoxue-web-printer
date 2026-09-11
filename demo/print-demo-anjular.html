@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Angular 打印示例 - 梦想家WEB打印控件</title>
+  <title>Angular 打印示例 - 晓雪WEB打印控件</title>
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
     body { font-family: "Microsoft YaHei","PingFang SC",sans-serif; background:#f0f2f5; color:#1f2329; padding:24px; max-width: 980px; margin: 0 auto; }
@@ -61,7 +61,7 @@
 <span class="kw">export class</span> <span class="fn">AppComponent</span> implements OnInit {
   printers: <span class="kw">string</span>[] = [];
   printer = <span class="str">''</span>;
-  content = <span class="str">'尊敬的客户：\n\n感谢您使用梦想家WEB打印控件（Angular 集成示例）。'</span>;
+  content = <span class="str">'尊敬的客户：\n\n感谢您使用晓雪WEB打印控件（Angular 集成示例）。'</span>;
 
   <span class="kw">constructor</span>(<span class="kw">private</span> print: PrintService) {}
 
@@ -123,9 +123,9 @@
     <!-- 集成代码 -->
     <div class="tab-panel" data-panel="code">
       <h2>第一步：引入 SDK</h2>
-      <p>将 <code>dreamer-printer-sdk.min.js</code> 放入工程的 <code>src/assets/</code> 目录，并在 <code>index.html</code> 中引入：</p>
+      <p>将 <code>xiaoxue-printer-sdk.min.js</code> 放入工程的 <code>src/assets/</code> 目录，并在 <code>index.html</code> 中引入：</p>
       <pre><span class="cm">&lt;!-- src/index.html --&gt;</span>
-<span class="tag">&lt;script</span> <span class="fn">src</span>=<span class="str">"assets/dreamer-printer-sdk.min.js"</span><span class="tag">&gt;</span><span class="tag">&lt;/script&gt;</span></pre>
+<span class="tag">&lt;script</span> <span class="fn">src</span>=<span class="str">"assets/xiaoxue-printer-sdk.min.js"</span><span class="tag">&gt;</span><span class="tag">&lt;/script&gt;</span></pre>
 
       <p>若需在组件中使用 TS 类型，添加全局类型声明 <code>src/typings.d.ts</code>：</p>
       <pre><span class="kw">declare class</span> <span class="fn">DreamerPrinterSDK</span> {

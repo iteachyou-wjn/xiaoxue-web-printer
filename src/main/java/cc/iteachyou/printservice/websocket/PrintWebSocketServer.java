@@ -384,8 +384,8 @@ public class PrintWebSocketServer extends WebSocketServer {
         }
         // text / html：未授权时强制试用版页头页尾
         if (!LicenseManager.isAuthorized() && style != null) {
-            style.put("paperHeader", "梦想家WEB打印控件试用版");
-            style.put("paperFooter", "梦想家WEB打印控件试用版");
+            style.put("paperHeader", "晓雪WEB打印控件试用版");
+            style.put("paperFooter", "晓雪WEB打印控件试用版");
         }
     }
 
