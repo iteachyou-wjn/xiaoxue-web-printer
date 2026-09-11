@@ -9,13 +9,13 @@
  *
  * 使用方式（浏览器）：
  *   <script src="xiaoxue-printer-sdk.js"></script>
- *   const sdk = new DreamerPrinterSDK({ url: 'ws://127.0.0.1:54321' });
+ *   const sdk = new XiaoxuePrinterSDK({ url: 'ws://127.0.0.1:54321' });
  *   sdk.connect();
  *   sdk.on('open', () => console.log('已连接'));
  *   sdk.doPrint({ printer: 'HP', content: { type: 'text', value: '报表' } }).then(r => console.log(r));
  *
  * 获取可用打印机 / 纸张（需先创建 SDK 实例，未连接时自动连接）：
- *   const sdk = new DreamerPrinterSDK({ url: 'ws://localhost:54321' });
+ *   const sdk = new XiaoxuePrinterSDK({ url: 'ws://localhost:54321' });
  *   sdk.getPrinters().then(r => console.log(r.printers));
  *   sdk.getPageSize('Microsoft Print to PDF').then(r => console.log(r.sizes));
  *
@@ -28,14 +28,14 @@
  *     .then(r => console.log(r.message));
  *
  * 使用方式（Node.js）：
- *   const DreamerPrinterSDK = require('./xiaoxue-printer-sdk');
+ *   const XiaoxuePrinterSDK = require('./xiaoxue-printer-sdk');
  */
 (function (global) {
   'use strict';
 
   const DEFAULT_URL = 'ws://localhost:54321';
 
-  class DreamerPrinterSDK {
+  class XiaoxuePrinterSDK {
     /**
      * @param {Object} options
      * @param {string}  [options.url='ws://localhost:54321']  WebSocket 服务地址
@@ -112,7 +112,7 @@
 
     /**
      * 连接服务
-     * @returns {DreamerPrinterSDK}
+     * @returns {XiaoxuePrinterSDK}
      */
     connect() {
       if (this.ws && (this.connecting || this.connected)) {
@@ -411,7 +411,7 @@
 
   /**
    * BarTender 实例对象。
-   * 通过 {@link DreamerPrinterSDK#getBartenderInstance()} 获取。
+   * 通过 {@link XiaoxuePrinterSDK#getBartenderInstance()} 获取。
    *
    * 实例属性（来自服务端 BarTender 实例信息）：
    *  - available   : boolean   BarTender 是否可用
@@ -421,7 +421,7 @@
   class Bartender {
     /**
      * @private
-     * @param {DreamerPrinterSDK} sdk SDK 实例
+     * @param {XiaoxuePrinterSDK} sdk SDK 实例
      * @param {Object} info BarTender 实例信息
      */
     constructor(sdk, info = {}) {
@@ -490,9 +490,9 @@
   }
 
   // 导出（浏览器挂到全局 / Node 用 module.exports）
-  global.DreamerPrinterSDK = DreamerPrinterSDK;
+  global.XiaoxuePrinterSDK = XiaoxuePrinterSDK;
   global.Bartender = Bartender;
   if (typeof module !== 'undefined' && module.exports) {
-    module.exports = DreamerPrinterSDK;
+    module.exports = XiaoxuePrinterSDK;
   }
 })(typeof window !== 'undefined' ? window : globalThis);

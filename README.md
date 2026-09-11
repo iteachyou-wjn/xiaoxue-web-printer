@@ -177,7 +177,7 @@ demo/index.html
 ```html
 <script src="xiaoxue-printer-sdk.js"></script>
 <script>
-  const sdk = new DreamerPrinterSDK({
+  const sdk = new XiaoxuePrinterSDK({
     url: 'ws://127.0.0.1:54321',  // 默认值
     autoReconnect: true,           // 断线自动重连
     reconnectDelay: 3000,          // 重连间隔（毫秒）

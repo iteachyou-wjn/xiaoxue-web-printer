@@ -1,5 +1,22 @@
 # 晓雪WEB打印控件 版本说明
 
+## v1.0.4 (2026-09-11)
+
+### 变更
+- **品牌更名**：应用名称由"梦想家WEB打印控件"统一更名为"晓雪WEB打印控件"，覆盖托盘菜单、关于窗体、预览窗体、安装包名称及全部界面文字。
+- **SDK 更名**：dreamer-printer-sdk.js 及压缩版更名为 xiaoxue-printer-sdk.js / xiaoxue-printer-sdk.min.js，demo 引用同步更新。
+- **项目更名**：项目目录更名 xiaoxue-web-printer，项目英文名统一为 "Xiaoxue WEB Printer"（pom.xml / README）。
+- **仓库迁移**：代码仓库迁移至 gitee.com/iteachyou/xiaoxue-web-printer.git。
+- **Demo 落款**：示例页面落款更新为 "I Teach You, 我教你！"。
+
+### 优化
+- README 全面重写，补充项目介绍、功能特性、环境要求与打包说明。
+
+### 打包
+- 重新打包安装程序：windows-晓雪WEB打印控件-1.0.4-x86_64.exe。
+
+---
+
 ## v1.0.3 (2026-08-28)
 
 ### 新增

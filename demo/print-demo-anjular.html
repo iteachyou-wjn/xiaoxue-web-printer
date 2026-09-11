@@ -128,7 +128,7 @@
 <span class="tag">&lt;script</span> <span class="fn">src</span>=<span class="str">"assets/xiaoxue-printer-sdk.min.js"</span><span class="tag">&gt;</span><span class="tag">&lt;/script&gt;</span></pre>
 
       <p>若需在组件中使用 TS 类型，添加全局类型声明 <code>src/typings.d.ts</code>：</p>
-      <pre><span class="kw">declare class</span> <span class="fn">DreamerPrinterSDK</span> {
+      <pre><span class="kw">declare class</span> <span class="fn">XiaoxuePrinterSDK</span> {
   <span class="kw">constructor</span>(options?: { url?: <span class="kw">string</span>; autoReconnect?: <span class="kw">boolean</span> });
   connect(): <span class="kw">this</span>;  disconnect(): <span class="kw">void</span>;
   on(event: <span class="kw">string</span>, cb: <span class="kw">Function</span>): <span class="kw">this</span>;
@@ -143,13 +143,13 @@
 
       <h2>第二步：封装打印服务（print.service.ts）</h2>
       <pre><span class="kw">import</span> { Injectable } from <span class="str">'@angular/core'</span>;
-<span class="kw">declare const</span> DreamerPrinterSDK: <span class="kw">any</span>;
+<span class="kw">declare const</span> XiaoxuePrinterSDK: <span class="kw">any</span>;
 
 @Injectable({ providedIn: <span class="str">'root'</span> })
 <span class="kw">export class</span> <span class="fn">PrintService</span> {
   <span class="kw">private</span> sdk: <span class="kw">any</span>;
   <span class="kw">constructor</span>() {
-    <span class="kw">this</span>.sdk = <span class="kw">new</span> DreamerPrinterSDK({ url: <span class="str">'ws://localhost:54321'</span> });
+    <span class="kw">this</span>.sdk = <span class="kw">new</span> XiaoxuePrinterSDK({ url: <span class="str">'ws://localhost:54321'</span> });
   }
   connect()      { <span class="kw">this</span>.sdk.connect(); }
   disconnect()   { <span class="kw">this</span>.sdk.disconnect(); }
@@ -172,7 +172,7 @@
 
       <h2>要点</h2>
       <ol>
-        <li>SDK 通过全局脚本引入，组件用 <code>declare const DreamerPrinterSDK</code> 声明类型。</li>
+        <li>SDK 通过全局脚本引入，组件用 <code>declare const XiaoxuePrinterSDK</code> 声明类型。</li>
         <li>建议封装为 <code>PrintService</code> 单例（<code>providedIn: 'root'</code>），多组件复用同一连接。</li>
         <li>所有 API 返回 Promise，需通过实例调用。</li>
         <li>组件销毁时在 <code>ngOnDestroy</code> 中 <code>disconnect()</code>，避免连接泄漏。</li>
@@ -182,7 +182,7 @@
 
     <div class="tab-panel" data-panel="task">
       <h2>任务管理 API（Angular）</h2>
-      <p>以下接口均需通过 <code>DreamerPrinterSDK</code> 实例调用：</p>
+      <p>以下接口均需通过 <code>XiaoxuePrinterSDK</code> 实例调用：</p>
       <ol>
         <li><code>getTaskList()</code> - 获取任务列表，返回 <code>{ tasks: [...] }</code></li>
         <li><code>getTaskStatus(taskId)</code> - 查询单个任务状态，返回 <code>{ task?, found }</code></li>
@@ -196,7 +196,7 @@
       <p>在 <code>PrintService</code> 中补充任务相关方法，并通过 <code>BehaviorSubject</code> 对外广播任务列表：</p>
       <pre><span class="kw">import</span> { Injectable } from <span class="str">'@angular/core'</span>;
 <span class="kw">import</span> { BehaviorSubject } from <span class="str">'rxjs'</span>;
-<span class="kw">declare const</span> DreamerPrinterSDK: <span class="kw">any</span>;
+<span class="kw">declare const</span> XiaoxuePrinterSDK: <span class="kw">any</span>;
 
 @Injectable({ providedIn: <span class="str">'root'</span> })
 <span class="kw">export class</span> <span class="fn">PrintService</span> {
@@ -204,7 +204,7 @@
   <span class="kw">readonly</span> tasks$ = <span class="kw">new</span> BehaviorSubject&lt;<span class="kw">any</span>[]&gt;([]);
 
   <span class="kw">constructor</span>() {
-    <span class="kw">this</span>.sdk = <span class="kw">new</span> DreamerPrinterSDK({ url: <span class="str">'ws://localhost:54321'</span> });
+    <span class="kw">this</span>.sdk = <span class="kw">new</span> XiaoxuePrinterSDK({ url: <span class="str">'ws://localhost:54321'</span> });
     <span class="kw">this</span>.sdk.on(<span class="str">'taskListUpdate'</span>, (list: <span class="kw">any</span>[]) =&gt; <span class="kw">this</span>.tasks$.next(list || []));
   }
   connect()      { <span class="kw">this</span>.sdk.connect(); }

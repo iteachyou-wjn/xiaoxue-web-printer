@@ -136,7 +136,7 @@
         <h3>二、在 Vue2 组件中使用</h3>
         <pre>// 组件中
 created() {
-  this.sdk = new DreamerPrinterSDK({ url: 'ws://localhost:54321' });
+  this.sdk = new XiaoxuePrinterSDK({ url: 'ws://localhost:54321' });
   this.sdk.on('open', () => {
     this.connected = true;
     this.fetchPrinters();
@@ -194,7 +194,7 @@ const img2 = await bt.getTemplateImageWithParams('D:\\labels\\a.btw', { 字段1:
 
       <div v-show="activeTab==='task'" class="code-block">
         <h3>一、任务管理 API</h3>
-        <p>以下接口均需通过 <code>DreamerPrinterSDK</code> 实例调用：</p>
+        <p>以下接口均需通过 <code>XiaoxuePrinterSDK</code> 实例调用：</p>
         <ol>
           <li><code>getTaskList()</code> - 获取任务列表，返回 <code>{ tasks: [...] }</code></li>
           <li><code>getTaskStatus(taskId)</code> - 查询单个任务状态，返回 <code>{ task?, found }</code></li>
@@ -207,7 +207,7 @@ const img2 = await bt.getTemplateImageWithParams('D:\\labels\\a.btw', { 字段1:
         <h3>二、在 Vue2 中使用</h3>
         <pre>// 组件中
 created() {
-  this.sdk = new DreamerPrinterSDK({ url: 'ws://localhost:54321' });
+  this.sdk = new XiaoxuePrinterSDK({ url: 'ws://localhost:54321' });
   this.sdk.on('taskListUpdate', (list) => { this.tasks = list || []; });
   this.sdk.on('open', this.refreshTasks);
   this.sdk.connect();
@@ -277,7 +277,7 @@ methods: {
           activeTab: 'text',
           printers: [],
           paperSizes: [],
-          content: '尊敬的客户：\n\n感谢您使用晓雪WEB打印控件（Vue2 集成示例）。\n\n通过 new DreamerPrinterSDK({ url }) 创建实例，即可调用打印服务。\n\n—— I Teach You, 我教你！',
+          content: '尊敬的客户：\n\n感谢您使用晓雪WEB打印控件（Vue2 集成示例）。\n\n通过 new XiaoxuePrinterSDK({ url }) 创建实例，即可调用打印服务。\n\n—— I Teach You, 我教你！',
           htmlContent: '<h1 style="text-align:center;color:#42b883">Vue2 HTML 打印</h1>\n<p style="text-align:center;color:#888">HTML 片段完整渲染</p>\n<hr>\n<table border="1" cellspacing="0" cellpadding="6" style="width:100%;border-collapse:collapse;text-align:center">\n  <tr style="background:#42b883;color:#fff"><th>项目</th><th>数量</th><th>金额</th></tr>\n  <tr><td>打印机服务</td><td>1</td><td>1,200.00</td></tr>\n  <tr><td>技术服务</td><td>2</td><td>3,600.00</td></tr>\n</table>',
           printer: '',
           paper: '',
@@ -299,7 +299,7 @@ methods: {
       },
       created: function () {
         var vm = this;
-        this.sdk = new DreamerPrinterSDK({ url: 'ws://localhost:54321' });
+        this.sdk = new XiaoxuePrinterSDK({ url: 'ws://localhost:54321' });
         this.sdk.on('open', function () {
           vm.connected = true;
           vm.log('已连接到打印服务', 'info');
