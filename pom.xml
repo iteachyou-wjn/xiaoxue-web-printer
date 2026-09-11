@@ -9,7 +9,7 @@
     <version>1.0.4</version>
     <packaging>jar</packaging>
 
-    <name>Dreamer Print Service</name>
+    <name>Xiaoxue WEB Printer</name>
     <description>SWT 打印控件 - 系统托盘 + WebSocket 服务</description>
 
     <properties>

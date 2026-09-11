@@ -1,6 +1,6 @@
 <div align="center">
 
-# Dreamer Print Service
+# Xiaoxue WEB Printer
 
 **晓雪 WEB 打印控件 — 浏览器里的本地打印，一行 SDK 全搞定**
 
