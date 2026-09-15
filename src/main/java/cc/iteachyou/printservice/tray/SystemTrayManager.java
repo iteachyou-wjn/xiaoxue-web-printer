@@ -289,9 +289,9 @@ public class SystemTrayManager {
         try {
             Process p = new ProcessBuilder("reg", "query", RUN_KEY, "/v", RUN_VALUE)
                     .redirectErrorStream(true).start();
-            String out = new String(p.getInputStream().readAllBytes(), StandardCharsets.UTF_8);
-            p.waitFor();
-            return out.contains(RUN_VALUE);
+            p.getInputStream().readAllBytes();
+            int code = p.waitFor();
+            return code == 0;
         } catch (Exception e) {
             log.warn("查询开机自启动状态失败", e);
             return false;

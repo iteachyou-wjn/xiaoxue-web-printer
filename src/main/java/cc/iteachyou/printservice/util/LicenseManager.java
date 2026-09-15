@@ -17,7 +17,7 @@ import java.util.Base64;
 /**
  * 授权许可管理器（离线非对称签名授权）。
  *
- * <p>授权码由授权工具（dreamer-print-service-authorization）用<b>私钥</b>签发，格式：</p>
+ * <p>授权码由授权工具（xiaoxue-print-service-authorization）用<b>私钥</b>签发，格式：</p>
  * <pre>{@code base64url(machine|expire|type|issue) + "." + base64url(SHA256withRSA签名)}</pre>
  *
  * <p>本类内置<b>公钥</b>验签：授权码无法伪造（私钥不在客户端）。校验内容包括：
@@ -87,9 +87,9 @@ public final class LicenseManager {
         }
     }
 
-    /** 授权码持久化文件：~/.dreamer-print/license.dat */
+    /** 授权码持久化文件：~/.xiaoxue-print/license.dat */
     private static final Path STORE = Paths.get(
-            System.getProperty("user.home", "."), ".dreamer-print", "license.dat");
+            System.getProperty("user.home", "."), ".xiaoxue-print", "license.dat");
 
     private static volatile LicenseInfo cachedInfo;
 
