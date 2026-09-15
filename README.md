@@ -4,7 +4,7 @@
 
 **浏览器里的本地打印，一行 SDK 全搞定**
 
-[![Version](https://img.shields.io/badge/version-1.0.4-blue)](RELEASE-NOTES.md)
+[![Version](https://img.shields.io/badge/version-1.0.5-blue)](RELEASE-NOTES.md)
 [![Java](https://img.shields.io/badge/Java-17%2B-orange)](https://adoptium.net/)
 [![Platform](https://img.shields.io/badge/platform-Windows%20%7C%20macOS%20%7C%20Linux-lightgrey)](#跨平台)
 [![License](https://img.shields.io/badge/license-MIT-green)](LICENSE)
