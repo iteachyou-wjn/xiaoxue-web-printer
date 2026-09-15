@@ -2,8 +2,8 @@
 # 绛栫暐锛氫粎娣锋穯绉佹湁鎴愬憳鍚嶏紙淇濈暀绫诲悕涓?public/protected 鏂规硶锛夛紝闅愯棌鍏挜绛夋晱鎰熺鏈夊瓧娈碉紝灏介噺涓嶅奖鍝?SWT/WebSocket 杩愯
 # 娉ㄦ剰锛氬彧瀵圭槮 jar锛堜富椤圭洰浠ｇ爜锛夋贩娣嗭紝渚濊禆搴撲笉娣锋穯锛涜矾寰勭浉瀵规湰鏂囦欢鎵€鍦ㄧ洰褰曪紙build/锛?
 
--injars  input/dreamer-print-service-1.0.4.jar
--outjars input/dreamer-print-service-1.0.4-obf.jar
+-injars  input/dreamer-print-service-1.0.5.jar
+-outjars input/dreamer-print-service-1.0.5-obf.jar
 
 # ---- JDK library (jmods) ----
 -libraryjars "D:/Program Files/Java/jdk-17/jmods/java.base.jmod"

@@ -53,7 +53,7 @@ public class SystemTrayManager {
     /** 开机自启动注册表 Run 键 */
     private static final String RUN_KEY = "HKCU\\Software\\Microsoft\\Windows\\CurrentVersion\\Run";
     /** 注册表中的自启动值名称 */
-    private static final String RUN_VALUE = "DreamerPrintService";
+    private static final String RUN_VALUE = "晓雪WEB打印控件";
 
     public SystemTrayManager(MainApp mainApp, Display display, Shell shell) {
         this.mainApp = mainApp;
