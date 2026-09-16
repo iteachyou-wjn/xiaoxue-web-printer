@@ -9,6 +9,8 @@
 [![Platform](https://img.shields.io/badge/platform-Windows%20%7C%20macOS%20%7C%20Linux-lightgrey)](#跨平台)
 [![License](https://img.shields.io/badge/license-MIT-green)](LICENSE)
 
+📚 **在线文档：[https://iteachyou-wjn.github.io/xiaoxue-web-printer](https://iteachyou-wjn.github.io/xiaoxue-web-printer)**
+
 ## 简介
 
 一个驻留在**系统托盘**的本机打印服务。启动后没有主窗口，只在后台静默运行：
