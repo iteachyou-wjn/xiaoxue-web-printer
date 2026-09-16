@@ -1,0 +1,443 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>普通打印示例 - 晓雪WEB打印控件</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: "Microsoft YaHei", "PingFang SC", sans-serif;
+      background: #f0f2f5;
+      color: #1f2329;
+      padding: 24px;
+    }
+    .topbar {
+      display: flex; align-items: center; justify-content: space-between;
+      margin-bottom: 20px;
+    }
+    .topbar h1 { font-size: 20px; }
+    .topbar a { color: #3370ff; text-decoration: none; font-size: 13px; }
+    .conn { display: flex; align-items: center; gap: 8px; font-size: 13px; }
+    .dot { width: 10px; height: 10px; border-radius: 50%; display: inline-block; }
+    .dot.on { background: #34c724; }
+    .dot.off { background: #c0c4cc; }
+    .layout { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+    .panel { background: #fff; border-radius: 10px; padding: 20px; border: 1px solid #e5e6eb; }
+    .panel h2 { font-size: 15px; margin-bottom: 16px; color: #1f2329; border-bottom: 1px solid #f0f1f3; padding-bottom: 10px; }
+    .tabs { display: flex; gap: 4px; border-bottom: 2px solid #e5e6eb; margin-bottom: 16px; }
+    .tab { padding: 9px 18px; cursor: pointer; font-size: 14px; color: #5a6068; border-bottom: 2px solid transparent; margin-bottom: -2px; transition: all .15s; }
+    .tab:hover { color: #3370ff; }
+    .tab.active { color: #3370ff; border-bottom-color: #3370ff; font-weight: 600; }
+    .tab-panel { display: none; }
+    .tab-panel.active { display: block; }
+    .form-row { display: flex; gap: 12px; margin-bottom: 12px; flex-wrap: wrap; }
+    .form-item { flex: 1; min-width: 140px; }
+    .form-item label { display: block; font-size: 12px; color: #8a919f; margin-bottom: 5px; }
+    .form-item input, .form-item select, .form-item textarea {
+      width: 100%; padding: 7px 10px; border: 1px solid #d9dce0; border-radius: 6px;
+      font-size: 13px; outline: none; transition: border-color .2s;
+    }
+    .form-item input:focus, .form-item select:focus, .form-item textarea:focus { border-color: #3370ff; }
+    .form-item textarea { resize: vertical; min-height: 300px; font-family: Consolas, monospace; }
+    .form-item.full { flex: 0 0 100%; }
+    .actions { display: flex; gap: 12px; margin-top: 4px; }
+    .btn {
+      padding: 9px 22px; border: none; border-radius: 6px; font-size: 14px; cursor: pointer;
+      transition: all .2s; color: #fff;
+    }
+    .btn-primary { background: #3370ff; }
+    .btn-primary:hover { background: #2b5fd6; }
+    .btn-primary:disabled { background: #c0c4cc; cursor: not-allowed; }
+    .btn-success { background: #34c724; }
+    .btn-success:hover { background: #2aa81e; }
+    .btn-success:disabled { background: #c0c4cc; cursor: not-allowed; }
+    .log {
+      margin-top: 20px; background: #1e1e1e; color: #d4d4d4; border-radius: 8px;
+      padding: 12px; font-size: 12px; font-family: Consolas, monospace; height: 220px; overflow-y: auto;
+    }
+    .log div { line-height: 1.7; }
+    .log .info { color: #d4d4d4; }
+    .log .success { color: #4ec950; }
+    .log .error { color: #f0616d; }
+    .log .warn { color: #d9a520; }
+    .hint { font-size: 12px; color: #8a919f; margin-top: 8px; }
+  </style>
+</head>
+<body>
+  <div class="topbar">
+    <h1>📄 普通打印示例</h1>
+    <div style="display:flex;align-items:center;gap:16px;">
+      <a href="index.html">← 返回首页</a>
+      <div class="conn"><span class="dot off" id="connDot"></span><span id="connText">未连接</span></div>
+    </div>
+  </div>
+
+  <div class="layout">
+    <!-- 左侧：打印内容（文本 / HTML） -->
+    <div class="panel">
+      <div class="tabs">
+        <div class="tab active" data-tab="text" onclick="switchTab('text')">文本</div>
+        <div class="tab" data-tab="html" onclick="switchTab('html')">HTML</div>
+        <div class="tab" data-tab="bartender" onclick="switchTab('bartender')">BarTender</div>
+      </div>
+
+      <div class="tab-panel active" data-panel="text">
+        <div class="form-item full">
+          <textarea id="textContent" placeholder="请输入要打印的文本内容...">尊敬的客户：
+
+感谢您选择晓雪WEB打印控件服务。
+
+本示例演示使用 SDK 的 doPreview / doPrint 方法提交普通文本打印任务。
+您可以在右侧调整纸张、边距、字体等打印样式。
+
+—— I Teach You, 我教你！</textarea>
+        </div>
+        <div class="hint">内容将以纯文本方式渲染打印，支持换行与空白字符。</div>
+      </div>
+
+      <div class="tab-panel" data-panel="html">
+        <div class="form-item full">
+          <textarea id="htmlContent" placeholder="请输入 HTML 片段，将保留样式渲染...">&lt;!DOCTYPE html&gt;
+&lt;html&gt;
+&lt;head&gt;&lt;meta charset="utf-8"&gt;&lt;/head&gt;
+&lt;body style="font-family:宋体"&gt;
+  &lt;h1 style="text-align:center;color:#3370ff"&gt;晓雪WEB打印控件&lt;/h1&gt;
+  &lt;p style="text-align:center;color:#888"&gt;—— HTML 打印示例 ——&lt;/p&gt;
+  &lt;hr&gt;
+  &lt;h2&gt;一、功能简介&lt;/h2&gt;
+  &lt;p&gt;本示例演示通过 &lt;code&gt;doPreview / doPrint&lt;/code&gt; 提交 &lt;b&gt;HTML 片段&lt;/b&gt; 打印任务，
+     服务端会将 HTML 渲染为 PDF 后输出到指定打印机。&lt;/p&gt;
+  &lt;h2&gt;二、数据表格&lt;/h2&gt;
+  &lt;table border="1" cellspacing="0" cellpadding="6" style="width:100%;border-collapse:collapse;text-align:center"&gt;
+    &lt;tr style="background:#3370ff;color:#fff"&gt;
+      &lt;th&gt;序号&lt;/th&gt;&lt;th&gt;项目&lt;/th&gt;&lt;th&gt;数量&lt;/th&gt;&lt;th&gt;金额（元）&lt;/th&gt;
+    &lt;/tr&gt;
+    &lt;tr&gt;&lt;td&gt;1&lt;/td&gt;&lt;td&gt;打印机服务&lt;/td&gt;&lt;td&gt;1&lt;/td&gt;&lt;td&gt;1,200.00&lt;/td&gt;&lt;/tr&gt;
+    &lt;tr&gt;&lt;td&gt;2&lt;/td&gt;&lt;td&gt;技术服务&lt;/td&gt;&lt;td&gt;2&lt;/td&gt;&lt;td&gt;3,600.00&lt;/td&gt;&lt;/tr&gt;
+    &lt;tr&gt;&lt;td&gt;3&lt;/td&gt;&lt;td&gt;运维支持&lt;/td&gt;&lt;td&gt;1&lt;/td&gt;&lt;td&gt;800.00&lt;/td&gt;&lt;/tr&gt;
+  &lt;/table&gt;
+  &lt;h2&gt;三、说明&lt;/h2&gt;
+  &lt;ul&gt;
+    &lt;li&gt;支持标题、段落、列表、表格、图片等常见 HTML 元素&lt;/li&gt;
+    &lt;li&gt;内联 style 样式会被解析并应用&lt;/li&gt;
+    &lt;li&gt;图片支持 base64 或可访问的 http(s) 地址&lt;/li&gt;
+  &lt;/ul&gt;
+  &lt;p style="text-align:right;color:#999"&gt;—— I Teach You, 我教你！ &lt;/p&gt;
+&lt;/body&gt;
+&lt;/html&gt;</textarea>
+        </div>
+        <div class="hint">HTML 片段将完整渲染，内联样式保留；也支持 base64 / http(s) 图片。</div>
+      </div>
+
+      <div class="tab-panel" data-panel="bartender">
+        <div class="form-item full">
+          <label>BarTender 模板路径 (.btw)</label>
+          <input id="btTemplate" placeholder="如：D:\labels\mylabel.btw">
+        </div>
+        <div class="form-item full" style="margin-top:12px;">
+          <label>模板字段 (JSON，可选)</label>
+          <textarea id="btParams" style="min-height:120px" placeholder='如：{"字段1":"值1","字段2":"值2"}'>{&quot;字段1&quot;:&quot;值1&quot;,&quot;字段2&quot;:&quot;值2&quot;}</textarea>
+        </div>
+
+        <div class="form-item full" style="margin-top:16px;">
+          <div class="actions" style="flex-wrap:wrap;">
+            <button class="btn btn-primary" id="btnBtInstance">获取 BarTender 实例</button>
+            <button class="btn btn-success" id="btnBtParams">获取模板参数</button>
+            <button class="btn btn-success" id="btnBtImage">获取模板图像</button>
+            <button class="btn btn-success" id="btnBtImageWithParams">获取带参数模板图像</button>
+          </div>
+        </div>
+
+        <div class="form-item full" style="margin-top:12px;">
+          <div id="btInstanceInfo" class="hint">（点击「获取 BarTender 实例」查看版本信息）</div>
+          <div id="btParamsResult" class="hint" style="margin-top:8px;">（模板参数将显示在这里）</div>
+          <img id="btPreviewImg" style="display:none;max-width:100%;margin-top:10px;border:1px solid #e5e6eb;border-radius:6px;background:#fff;">
+        </div>
+
+        <div class="hint">预览/打印时将直接调用本机 BarTender 渲染或打印该模板。</div>
+      </div>
+    </div>
+
+    <!-- 右侧：打印设置 -->
+    <div class="panel">
+      <h2>打印设置</h2>
+      <div class="form-row">
+        <div class="form-item">
+          <label>打印机</label>
+          <select id="printerSelect"><option value="">请选择打印机</option></select>
+        </div>
+        <div class="form-item">
+          <label>纸张</label>
+          <select id="paperSelect"><option value="">请先选择打印机</option></select>
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="form-item">
+          <label>方向</label>
+          <select id="directionSelect">
+            <option value="vertical">纵向</option>
+            <option value="horizontal">横向</option>
+          </select>
+        </div>
+        <div class="form-item">
+          <label>缩放比例</label>
+          <input id="zoom" type="number" step="0.1" min="0.1" value="1">
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="form-item">
+          <label>字体</label>
+          <select id="fontFamily">
+            <option value="宋体">宋体</option>
+            <option value="微软雅黑">微软雅黑</option>
+            <option value="黑体">黑体</option>
+            <option value="楷体">楷体</option>
+            <option value="仿宋">仿宋</option>
+            <option value="Arial">Arial</option>
+          </select>
+        </div>
+        <div class="form-item">
+          <label>字号</label>
+          <input id="fontSize" type="number" min="6" max="72" value="12">
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="form-item">
+          <label>页边距-上 (cm)</label>
+          <input id="marginTop" type="number" step="0.1" value="1">
+        </div>
+        <div class="form-item">
+          <label>页边距-右 (cm)</label>
+          <input id="marginRight" type="number" step="0.1" value="1">
+        </div>
+        <div class="form-item">
+          <label>页边距-下 (cm)</label>
+          <input id="marginBottom" type="number" step="0.1" value="1">
+        </div>
+        <div class="form-item">
+          <label>页边距-左 (cm)</label>
+          <input id="marginLeft" type="number" step="0.1" value="1">
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="form-item">
+          <label>页头</label>
+          <input id="paperHeader" placeholder="如：销售报表">
+        </div>
+        <div class="form-item">
+          <label>页脚</label>
+          <input id="paperFooter" placeholder="如：第 {page} 页">
+        </div>
+      </div>
+      <div class="actions">
+        <button class="btn btn-primary" id="btnPreview" disabled>打印预览</button>
+        <button class="btn btn-success" id="btnPrint" disabled>执行打印</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="log" id="log"></div>
+
+  <script src="../xiaoxue-printer-sdk.min.js"></script>
+  <script>
+    var $ = function (id) { return document.getElementById(id); };
+    var activeTab = 'text';
+
+    var sdk = new XiaoxuePrinterSDK({ url: 'ws://localhost:54321' });
+    var connected = false;
+
+    // ---------- Tab 切换 ----------
+    function switchTab(t) {
+      activeTab = t;
+      document.querySelectorAll('.tab').forEach(function (x) {
+        x.classList.toggle('active', x.getAttribute('data-tab') === t);
+      });
+      document.querySelectorAll('.tab-panel').forEach(function (x) {
+        x.classList.toggle('active', x.getAttribute('data-panel') === t);
+      });
+    }
+
+    // ---------- 日志 ----------
+    function log(msg, level) {
+      var el = $('log');
+      var div = document.createElement('div');
+      div.className = level || 'info';
+      div.textContent = '[' + new Date().toLocaleTimeString('zh-CN', { hour12: false }) + '] ' + msg;
+      el.appendChild(div);
+      el.scrollTop = el.scrollHeight;
+    }
+
+    // ---------- 连接状态 ----------
+    function setConnected(c) {
+      connected = c;
+      $('connDot').className = 'dot ' + (c ? 'on' : 'off');
+      $('connText').textContent = c ? '已连接' : '未连接';
+      $('btnPreview').disabled = !c;
+      $('btnPrint').disabled = !c;
+    }
+
+    // ---------- 工具：填充下拉 ----------
+    function fillSelect(sel, arr) {
+      var prev = sel.value;
+      sel.innerHTML = '';
+      if (!arr || !arr.length) {
+        sel.appendChild(new Option('无可用项', ''));
+        return;
+      }
+      arr.forEach(function (v) { sel.appendChild(new Option(v, v)); });
+      if (arr.indexOf(prev) >= 0) sel.value = prev;
+    }
+
+    // ---------- 打印机 & 纸张 ----------
+    function refreshPrinters() {
+      sdk.getPrinters().then(function (r) {
+        var printers = r.printers || [];
+        fillSelect($('printerSelect'), printers);
+        log('获取打印机成功，共 ' + printers.length + ' 台: ' + printers.join(', '), 'success');
+        if (printers.length) loadPageSizes(printers[0]);
+      }).catch(function (e) { log('获取打印机失败: ' + e.message, 'error'); });
+    }
+
+    function loadPageSizes(printer) {
+      sdk.getPageSize(printer).then(function (r) {
+        var sizes = r.sizes || [];
+        fillSelect($('paperSelect'), sizes);
+        log('获取「' + printer + '」纸张成功: ' + sizes.join(', '), 'success');
+      }).catch(function (e) { log('获取纸张失败: ' + e.message, 'error'); });
+    }
+
+    $('printerSelect').addEventListener('change', function () {
+      if (this.value) loadPageSizes(this.value);
+    });
+
+    // ---------- 构造请求 ----------
+    function buildRequest() {
+      var style = {
+        paper: $('paperSelect').value,
+        direction: $('directionSelect').value,
+        margin: {
+          top: +$('marginTop').value || 0,
+          right: +$('marginRight').value || 0,
+          bottom: +$('marginBottom').value || 0,
+          left: +$('marginLeft').value || 0
+        },
+        zoom: +$('zoom').value || 1,
+        fontFamily: $('fontFamily').value,
+        fontSize: +$('fontSize').value || 12,
+        paperHeader: $('paperHeader').value,
+        paperFooter: $('paperFooter').value
+      };
+      var content;
+      if (activeTab === 'bartender') {
+        var params = {};
+        try { params = JSON.parse($('btParams').value || '{}'); } catch (e) { params = {}; }
+        content = { type: 'bartender', value: $('btTemplate').value, params: params };
+      } else if (activeTab === 'html') {
+        content = { type: 'html', value: $('htmlContent').value };
+      } else {
+        content = { type: 'text', value: $('textContent').value };
+      }
+      return { printer: $('printerSelect').value, style: style, content: content };
+    }
+
+    // ---------- 预览 / 打印 ----------
+    $('btnPreview').addEventListener('click', function () {
+      log('发送预览请求...', 'info');
+      sdk.doPreview(buildRequest())
+        .then(function (r) { log('预览指令已发送: ' + (r.message || 'ok'), 'success'); })
+        .catch(function (e) { log('预览失败: ' + e.message, 'error'); });
+    });
+
+    $('btnPrint').addEventListener('click', function () {
+      log('发送打印请求...', 'info');
+      sdk.doPrint(buildRequest())
+        .then(function (r) { log('打印任务已提交，任务ID: ' + r.taskId, 'success'); })
+        .catch(function (e) { log('打印失败: ' + e.message, 'error'); });
+    });
+
+    // ---------- BarTender 实例示例 ----------
+    var btInstance = null;
+
+    function showBtImage(base64) {
+      var img = $('btPreviewImg');
+      if (base64) {
+        img.src = 'data:image/png;base64,' + base64;
+        img.style.display = 'block';
+      } else {
+        img.style.display = 'none';
+      }
+    }
+
+    $('btnBtInstance').addEventListener('click', function () {
+      log('获取 BarTender 实例...', 'info');
+      sdk.getBartenderInstance().then(function (bt) {
+        btInstance = bt;
+        $('btInstanceInfo').textContent = 'BarTender 可用: ' + bt.available
+          + '，版本: ' + (bt.version || '未知')
+          + (bt.fullVersion ? '，完整信息: ' + bt.fullVersion : '');
+        log('获取 BarTender 实例成功: 版本=' + (bt.version || '未知'), 'success');
+      }).catch(function (e) { log('获取 BarTender 实例失败: ' + e.message, 'error'); });
+    });
+
+    $('btnBtParams').addEventListener('click', function () {
+      var path = $('btTemplate').value;
+      if (!path) { log('请先填写模板路径', 'warn'); return; }
+      if (!btInstance) { log('请先点击「获取 BarTender 实例」', 'warn'); return; }
+      log('获取模板参数: ' + path, 'info');
+      btInstance.getTemplateParams(path).then(function (r) {
+        var list = r.params || [];
+        var parts = list.map(function (it) {
+          return it.name + ' (' + it.type + ')';
+        });
+        $('btParamsResult').textContent = '模板参数: ' + (parts.length ? parts.join(', ') : '（无）');
+        log('获取模板参数成功: ' + (parts.length ? parts.join(', ') : '（无）'), 'success');
+      }).catch(function (e) { log('获取模板参数失败: ' + e.message, 'error'); });
+    });
+
+    $('btnBtImage').addEventListener('click', function () {
+      var path = $('btTemplate').value;
+      if (!path) { log('请先填写模板路径', 'warn'); return; }
+      if (!btInstance) { log('请先点击「获取 BarTender 实例」', 'warn'); return; }
+      log('获取模板图像: ' + path, 'info');
+      btInstance.getTemplateImage(path).then(function (r) {
+        showBtImage(r.image);
+        log('获取模板图像成功', 'success');
+      }).catch(function (e) { log('获取模板图像失败: ' + e.message, 'error'); });
+    });
+
+    $('btnBtImageWithParams').addEventListener('click', function () {
+      var path = $('btTemplate').value;
+      if (!path) { log('请先填写模板路径', 'warn'); return; }
+      if (!btInstance) { log('请先点击「获取 BarTender 实例」', 'warn'); return; }
+      var params = {};
+      try { params = JSON.parse($('btParams').value || '{}'); } catch (e) { params = {}; }
+      log('获取带参数模板图像: ' + path, 'info');
+      btInstance.getTemplateImageWithParams(path, params).then(function (r) {
+        showBtImage(r.image);
+        log('获取带参数模板图像成功', 'success');
+      }).catch(function (e) { log('获取带参数模板图像失败: ' + e.message, 'error'); });
+    });
+
+    // ---------- SDK 事件 ----------
+    sdk.on('open', function () {
+      setConnected(true);
+      log('已连接到打印服务', 'info');
+      refreshPrinters();
+    });
+    sdk.on('close', function () {
+      setConnected(false);
+      log('连接已断开', 'warn');
+    });
+    sdk.on('error', function (e) {
+      log('连接错误: ' + (e && e.message || '未知错误'), 'error');
+    });
+    sdk.on('welcome', function (msg) {
+      log('欢迎消息: ' + msg.message + '（端口 ' + msg.port + '）', 'info');
+    });
+
+    // 启动连接
+    sdk.connect();
+  </script>
+</body>
+</html>

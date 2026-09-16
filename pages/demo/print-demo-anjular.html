@@ -1,0 +1,288 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Angular 打印示例 - 晓雪WEB打印控件</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { font-family: "Microsoft YaHei","PingFang SC",sans-serif; background:#f0f2f5; color:#1f2329; padding:24px; max-width: 980px; margin: 0 auto; }
+    .topbar { display:flex; align-items:center; justify-content:space-between; margin-bottom:20px; }
+    .topbar h1 { font-size:20px; }
+    .topbar a { color:#3370ff; text-decoration:none; font-size:13px; }
+    .note { background:#fff4e5; border:1px solid #ffd591; color:#ad6800; padding:12px 16px; border-radius:8px; font-size:13px; line-height:1.7; margin-bottom:20px; }
+    .panel { background:#fff; border-radius:10px; padding:20px; border:1px solid #e5e6eb; margin-bottom:20px; }
+    .tabs { display:flex; gap:4px; border-bottom:2px solid #e5e6eb; margin-bottom:16px; }
+    .tab { padding:9px 18px; cursor:pointer; font-size:14px; color:#5a6068; border-bottom:2px solid transparent; margin-bottom:-2px; transition:all .15s; }
+    .tab:hover { color:#dd0031; }
+    .tab.active { color:#dd0031; border-bottom-color:#dd0031; font-weight:600; }
+    .tab-panel { display:none; }
+    .tab-panel.active { display:block; }
+    .panel h2 { font-size:15px; margin-bottom:14px; border-bottom:1px solid #f0f1f3; padding-bottom:10px; }
+    .panel h3 { font-size:14px; margin:18px 0 8px; color:#dd0031; }
+    .panel p { font-size:13px; color:#5a6068; line-height:1.8; margin-bottom:10px; }
+    .panel ol { margin: 8px 0 8px 20px; font-size:13px; color:#5a6068; line-height:2; }
+    pre { background:#1e1e1e; color:#d4d4d4; border-radius:8px; padding:14px; font-size:12px; font-family:Consolas,monospace; line-height:1.6; overflow-x:auto; margin:8px 0; }
+    .tag { color:#ce9178; } .kw { color:#569cd6; } .str { color:#ce9178; } .cm { color:#6a9955; } .fn { color:#dcdcaa; } .num { color:#b5cea8; }
+    .badge { display:inline-block; background:#fde8ec; color:#dd0031; font-size:12px; padding:2px 10px; border-radius:10px; margin-left:8px; }
+  </style>
+</head>
+<body>
+  <div class="topbar">
+    <h1>🔴 Angular 打印示例 <span class="badge">Angular CLI</span></h1>
+    <a href="index.html">← 返回首页</a>
+  </div>
+
+  <div class="note">
+    ⚠️ <b>说明</b>：现代 Angular（Angular 2+）必须通过 <b>Angular CLI 工程</b> 构建运行，无法像 Vue/React 那样单 HTML 直接运行。
+    下方三个 tab 分别给出「文本打印」「HTML 打印」的组件代码与「完整集成步骤」。
+  </div>
+
+  <div class="panel">
+    <div class="tabs">
+      <div class="tab active" data-tab="text" onclick="switchTab('text')">文本</div>
+      <div class="tab" data-tab="html" onclick="switchTab('html')">HTML</div>
+      <div class="tab" data-tab="task" onclick="switchTab('task')">打印任务</div>
+      <div class="tab" data-tab="bartender" onclick="switchTab('bartender')">BarTender</div>
+      <div class="tab" data-tab="code" onclick="switchTab('code')">集成代码</div>
+    </div>
+
+    <!-- 文本打印 -->
+    <div class="tab-panel active" data-panel="text">
+      <h2>文本打印示例（app.component.ts）</h2>
+      <p>通过 <code>PrintService</code>（封装 SDK）提交 <code>content.type='text'</code> 的打印任务。完整接入步骤见「集成代码」tab。</p>
+      <pre><span class="kw">import</span> { Component, OnInit } from <span class="str">'@angular/core'</span>;
+<span class="kw">import</span> { PrintService } from <span class="str">'./print.service'</span>;
+
+@Component({
+  selector: <span class="str">'app-root'</span>,
+  templateUrl: <span class="str">'./app.component.html'</span>
+})
+<span class="kw">export class</span> <span class="fn">AppComponent</span> implements OnInit {
+  printers: <span class="kw">string</span>[] = [];
+  printer = <span class="str">''</span>;
+  content = <span class="str">'尊敬的客户：\n\n感谢您使用晓雪WEB打印控件（Angular 集成示例）。'</span>;
+
+  <span class="kw">constructor</span>(<span class="kw">private</span> print: PrintService) {}
+
+  ngOnInit() {
+    <span class="kw">this</span>.print.connect();
+    setTimeout(() =&gt; <span class="kw">this</span>.refreshPrinters(), <span class="num">600</span>);
+  }
+
+  refreshPrinters() {
+    <span class="kw">this</span>.print.getPrinters().then((r: <span class="kw">any</span>) =&gt; { <span class="kw">this</span>.printers = r.printers || []; });
+  }
+
+  <span class="kw">private</span> buildTextRequest() {
+    <span class="kw">return</span> {
+      printer: <span class="kw">this</span>.printer,
+      style: { paper: <span class="str">'A4'</span>, direction: <span class="str">'vertical'</span>, fontSize: <span class="num">12</span> },
+      content: { type: <span class="str">'text'</span>, value: <span class="kw">this</span>.content }   <span class="cm">// 文本打印</span>
+    };
+  }
+
+  doPreview() { <span class="kw">this</span>.print.preview(<span class="kw">this</span>.buildTextRequest()).then(() =&gt; alert(<span class="str">'预览已发送'</span>)); }
+  doPrint()   { <span class="kw">this</span>.print.print(<span class="kw">this</span>.buildTextRequest()).then((r) =&gt; alert(<span class="str">'任务ID: '</span> + r.taskId)); }
+}</pre>
+    </div>
+
+    <!-- HTML 打印 -->
+    <div class="tab-panel" data-panel="html">
+      <h2>HTML 打印示例（app.component.ts）</h2>
+      <p>通过 <code>PrintService</code> 提交 <code>content.type='html'</code> 的打印任务，保留 HTML 样式渲染。</p>
+      <pre><span class="kw">import</span> { Component, OnInit } from <span class="str">'@angular/core'</span>;
+<span class="kw">import</span> { PrintService } from <span class="str">'./print.service'</span>;
+
+@Component({
+  selector: <span class="str">'app-root'</span>,
+  templateUrl: <span class="str">'./app.component.html'</span>
+})
+<span class="kw">export class</span> <span class="fn">AppComponent</span> implements OnInit {
+  printers: <span class="kw">string</span>[] = [];
+  printer = <span class="str">''</span>;
+  htmlContent = <span class="str">'&lt;h1 style="text-align:center;color:#dd0031"&gt;Angular HTML 打印&lt;/h1&gt;&lt;table border="1"&gt;&lt;tr&gt;&lt;th&gt;项目&lt;/th&gt;&lt;th&gt;金额&lt;/th&gt;&lt;/tr&gt;&lt;tr&gt;&lt;td&gt;服务&lt;/td&gt;&lt;td&gt;1,200.00&lt;/td&gt;&lt;/tr&gt;&lt;/table&gt;'</span>;
+
+  <span class="kw">constructor</span>(<span class="kw">private</span> print: PrintService) {}
+
+  ngOnInit() { <span class="kw">this</span>.print.connect(); }
+
+  <span class="kw">private</span> buildHtmlRequest() {
+    <span class="kw">return</span> {
+      printer: <span class="kw">this</span>.printer,
+      style: { paper: <span class="str">'A4'</span>, direction: <span class="str">'vertical'</span>, fontSize: <span class="num">12</span> },
+      content: { type: <span class="str">'html'</span>, value: <span class="kw">this</span>.htmlContent }  <span class="cm">// HTML 打印</span>
+    };
+  }
+
+  doPreview() { <span class="kw">this</span>.print.preview(<span class="kw">this</span>.buildHtmlRequest()).then(() =&gt; alert(<span class="str">'预览已发送'</span>)); }
+  doPrint()   { <span class="kw">this</span>.print.print(<span class="kw">this</span>.buildHtmlRequest()).then((r) =&gt; alert(<span class="str">'任务ID: '</span> + r.taskId)); }
+}</pre>
+    </div>
+
+    <!-- 集成代码 -->
+    <div class="tab-panel" data-panel="code">
+      <h2>第一步：引入 SDK</h2>
+      <p>将 <code>xiaoxue-printer-sdk.min.js</code> 放入工程的 <code>src/assets/</code> 目录，并在 <code>index.html</code> 中引入：</p>
+      <pre><span class="cm">&lt;!-- src/index.html --&gt;</span>
+<span class="tag">&lt;script</span> <span class="fn">src</span>=<span class="str">"assets/xiaoxue-printer-sdk.min.js"</span><span class="tag">&gt;</span><span class="tag">&lt;/script&gt;</span></pre>
+
+      <p>若需在组件中使用 TS 类型，添加全局类型声明 <code>src/typings.d.ts</code>：</p>
+      <pre><span class="kw">declare class</span> <span class="fn">XiaoxuePrinterSDK</span> {
+  <span class="kw">constructor</span>(options?: { url?: <span class="kw">string</span>; autoReconnect?: <span class="kw">boolean</span> });
+  connect(): <span class="kw">this</span>;  disconnect(): <span class="kw">void</span>;
+  on(event: <span class="kw">string</span>, cb: <span class="kw">Function</span>): <span class="kw">this</span>;
+  getPrinters(): Promise&lt;<span class="kw">any</span>&gt;;
+  getPageSize(printerName: <span class="kw">string</span>): Promise&lt;<span class="kw">any</span>&gt;;
+  doPrint(json: <span class="kw">any</span>): Promise&lt;<span class="kw">any</span>&gt;;
+  doPreview(json: <span class="kw">any</span>): Promise&lt;<span class="kw">any</span>&gt;;
+  getTaskList(): Promise&lt;<span class="kw">any</span>&gt;;
+  cancelTask(taskId: <span class="kw">string</span>): Promise&lt;<span class="kw">any</span>&gt;;
+  clearTasks(): Promise&lt;<span class="kw">any</span>&gt;;
+}</pre>
+
+      <h2>第二步：封装打印服务（print.service.ts）</h2>
+      <pre><span class="kw">import</span> { Injectable } from <span class="str">'@angular/core'</span>;
+<span class="kw">declare const</span> XiaoxuePrinterSDK: <span class="kw">any</span>;
+
+@Injectable({ providedIn: <span class="str">'root'</span> })
+<span class="kw">export class</span> <span class="fn">PrintService</span> {
+  <span class="kw">private</span> sdk: <span class="kw">any</span>;
+  <span class="kw">constructor</span>() {
+    <span class="kw">this</span>.sdk = <span class="kw">new</span> XiaoxuePrinterSDK({ url: <span class="str">'ws://localhost:54321'</span> });
+  }
+  connect()      { <span class="kw">this</span>.sdk.connect(); }
+  disconnect()   { <span class="kw">this</span>.sdk.disconnect(); }
+  getPrinters()  { <span class="kw">return this</span>.sdk.getPrinters(); }
+  getPageSize(p) { <span class="kw">return this</span>.sdk.getPageSize(p); }
+  preview(json)  { <span class="kw">return this</span>.sdk.doPreview(json); }
+  print(json)    { <span class="kw">return this</span>.sdk.doPrint(json); }
+}</pre>
+
+      <h2>第三步：组件中使用与模板</h2>
+      <p>文本 / HTML 两种场景的组件代码见上方两个 tab。模板示意：</p>
+      <pre><span class="cm">&lt;!-- app.component.html --&gt;</span>
+&lt;select [(ngModel)]=<span class="str">"printer"</span>&gt;
+  &lt;option *ngFor=<span class="str">"let p of printers"</span> [value]=<span class="str">"p"</span>&gt;{{ p }}&lt;/option&gt;
+&lt;/select&gt;
+&lt;textarea [(ngModel)]=<span class="str">"content"</span>&gt;&lt;/textarea&gt;
+&lt;button (click)=<span class="str">"doPreview()"</span>&gt;打印预览&lt;/button&gt;
+&lt;button (click)=<span class="str">"doPrint()"</span>&gt;执行打印&lt;/button&gt;</pre>
+      <p>如需使用 <code>ngModel</code>，请在模块中引入 <code>FormsModule</code>。</p>
+
+      <h2>要点</h2>
+      <ol>
+        <li>SDK 通过全局脚本引入，组件用 <code>declare const XiaoxuePrinterSDK</code> 声明类型。</li>
+        <li>建议封装为 <code>PrintService</code> 单例（<code>providedIn: 'root'</code>），多组件复用同一连接。</li>
+        <li>所有 API 返回 Promise，需通过实例调用。</li>
+        <li>组件销毁时在 <code>ngOnDestroy</code> 中 <code>disconnect()</code>，避免连接泄漏。</li>
+        <li>BarTender 模板参数 / 图像集成见「BarTender」标签页。</li>
+      </ol>
+    </div>
+
+    <div class="tab-panel" data-panel="task">
+      <h2>任务管理 API（Angular）</h2>
+      <p>以下接口均需通过 <code>XiaoxuePrinterSDK</code> 实例调用：</p>
+      <ol>
+        <li><code>getTaskList()</code> - 获取任务列表，返回 <code>{ tasks: [...] }</code></li>
+        <li><code>getTaskStatus(taskId)</code> - 查询单个任务状态，返回 <code>{ task?, found }</code></li>
+        <li><code>cancelTask(taskId)</code> - 取消「待打印 / 打印中」任务，返回 <code>{ success, message }</code></li>
+        <li><code>clearTasks()</code> - 清除「已完成 / 失败」任务，返回 <code>{ success, message }</code></li>
+        <li><code>doPrint(json)</code> - 提交并执行打印任务，返回 <code>{ success, taskId }</code></li>
+        <li><code>taskListUpdate</code> 事件 - 服务端在任务变化时主动推送任务列表</li>
+      </ol>
+
+      <h2>在 Angular 中使用（PrintService 扩展）</h2>
+      <p>在 <code>PrintService</code> 中补充任务相关方法，并通过 <code>BehaviorSubject</code> 对外广播任务列表：</p>
+      <pre><span class="kw">import</span> { Injectable } from <span class="str">'@angular/core'</span>;
+<span class="kw">import</span> { BehaviorSubject } from <span class="str">'rxjs'</span>;
+<span class="kw">declare const</span> XiaoxuePrinterSDK: <span class="kw">any</span>;
+
+@Injectable({ providedIn: <span class="str">'root'</span> })
+<span class="kw">export class</span> <span class="fn">PrintService</span> {
+  <span class="kw">private</span> sdk: <span class="kw">any</span>;
+  <span class="kw">readonly</span> tasks$ = <span class="kw">new</span> BehaviorSubject&lt;<span class="kw">any</span>[]&gt;([]);
+
+  <span class="kw">constructor</span>() {
+    <span class="kw">this</span>.sdk = <span class="kw">new</span> XiaoxuePrinterSDK({ url: <span class="str">'ws://localhost:54321'</span> });
+    <span class="kw">this</span>.sdk.on(<span class="str">'taskListUpdate'</span>, (list: <span class="kw">any</span>[]) =&gt; <span class="kw">this</span>.tasks$.next(list || []));
+  }
+  connect()      { <span class="kw">this</span>.sdk.connect(); }
+  disconnect()   { <span class="kw">this</span>.sdk.disconnect(); }
+  getTaskList()  { <span class="kw">return this</span>.sdk.getTaskList(); }
+  getTaskStatus(id: <span class="kw">string</span>) { <span class="kw">return this</span>.sdk.getTaskStatus(id); }
+  cancelTask(id: <span class="kw">string</span>) { <span class="kw">return this</span>.sdk.cancelTask(id); }
+  clearTasks()   { <span class="kw">return this</span>.sdk.clearTasks(); }
+  submitPrint(job: <span class="kw">any</span>) { <span class="kw">return this</span>.sdk.doPrint(job); }
+}</pre>
+
+      <h2>任务状态说明</h2>
+      <ol>
+        <li><code>PENDING</code> - 待打印（可取消）</li>
+        <li><code>PRINTING</code> - 打印中（可取消）</li>
+        <li><code>COMPLETED</code> - 已完成</li>
+        <li><code>FAILED</code> - 失败（可通过 <code>errorMessage</code> 查看原因）</li>
+      </ol>
+    </div>
+
+    <div class="tab-panel" data-panel="bartender">
+      <h2>BarTender 集成（Angular）</h2>
+      <p>通过 <code>getBartenderInstance()</code> 获取 BarTender 实例，再调用模板参数 / 图像接口。各方法返回 Promise：</p>
+      <ol>
+        <li><code>getBartenderInstance()</code> - 获取实例，返回 <code>{ available, version, fullVersion }</code></li>
+        <li><code>getTemplateParams(templatePath)</code> - 获取模板参数，返回 <code>{ name, type }[]</code>（type：Barcode/Text/Picture 等，条码不细分）</li>
+        <li><code>getTemplateImage(templatePath)</code> - 获取模板图像，返回 base64</li>
+        <li><code>getTemplateImageWithParams(templatePath, params)</code> - 获取带参数模板预览图像（base64）</li>
+      </ol>
+
+      <h2>在 Angular 中使用（PrintService 扩展）</h2>
+      <pre>// PrintService 中新增 BarTender 方法
+getBartender() {
+  return this.sdk.getBartenderInstance();
+}
+// 模板参数（含控件类型）
+getTemplateParams(path: string) {
+  return this.getBartender().then(bt =&gt; bt.getTemplateParams(path));
+}
+// 模板图像（base64）
+getTemplateImage(path: string) {
+  return this.getBartender().then(bt =&gt; bt.getTemplateImage(path));
+}
+// 带参数模板预览图像（base64）
+getTemplateImageWithParams(path: string, params: any) {
+  return this.getBartender().then(bt =&gt; bt.getTemplateImageWithParams(path, params));
+}</pre>
+
+      <h2>BarTender 打印 / 预览</h2>
+      <p>提交打印或预览时，将 <code>content.type</code> 设为 <code>'bartender'</code>，服务端将调用本机 BarTender 渲染/打印模板：</p>
+      <pre>// app.component.ts
+private buildBartenderRequest() {
+  const params = JSON.parse(this.btParamsText || '{}');
+  return {
+    printer: this.printer,
+    style: { paper: 'A4', direction: 'vertical' },
+    content: {
+      type: 'bartender',          // 关键：BarTender 类型
+      value: this.btTemplate,     // 模板路径 .btw
+      params: params              // 模板字段值
+    }
+  };
+}
+
+doPreview() { this.print.preview(this.buildBartenderRequest()); }  // 打印预览
+doPrint()   { this.print.print(this.buildBartenderRequest()); }    // 执行打印</pre>
+    </div>
+  </div>
+
+  <script>
+    function switchTab(t) {
+      document.querySelectorAll('.tab').forEach(function (x) {
+        x.classList.toggle('active', x.getAttribute('data-tab') === t);
+      });
+      document.querySelectorAll('.tab-panel').forEach(function (x) {
+        x.classList.toggle('active', x.getAttribute('data-panel') === t);
+      });
+    }
+  </script>
+</body>
+</html>
