@@ -236,13 +236,20 @@ methods: {
 
       <div v-show="activeTab==='bartender'">
         <div class="form-item full">
-          <label>BarTender 模板路径 (.btw)</label>
-          <input v-model="btTemplate" placeholder="如：D:\labels\mylabel.btw">
+          <label>BarTender 模板（reports/bt 目录下）</label>
+          <select v-model="btTemplate">
+            <option value="">请先点击「列出模板」</option>
+            <option v-for="t in btTemplateOptions" :key="t.file" :value="t.file">{{ t.label }}</option>
+          </select>
         </div>
         <div class="form-item full" style="margin-top:12px;">
           <label>模板字段 (JSON，可选)</label>
           <textarea v-model="btParamsText" placeholder='如：{"字段1":"值1","字段2":"值2"}' style="min-height:120px;"></textarea>
         </div>
+        <div class="actions" style="margin-top:12px;">
+          <button class="btn btn-primary" :disabled="!connected" @click="btListTemplates">列出模板</button>
+        </div>
+        <div class="hint" style="margin-top:8px;">{{ btTemplatesResult }}</div>
         <div class="actions" style="margin-top:16px;flex-wrap:wrap;">
           <button class="btn btn-primary" :disabled="!connected" @click="getBtInstance">获取 BarTender 实例</button>
           <button class="btn btn-success" :disabled="!connected" @click="btGetParams">获取模板参数</button>
@@ -289,6 +296,8 @@ methods: {
           paperHeader: '',
           paperFooter: '',
           btTemplate: '',
+          btTemplateOptions: [],
+          btTemplatesResult: '（模板列表将显示在这里）',
           btParamsText: '',
           btInstance: null,
           btInstanceInfo: '（点击「获取 BarTender 实例」查看版本信息）',
@@ -381,11 +390,42 @@ methods: {
             vm.btInstanceInfo = 'BarTender 可用: ' + bt.available + '，版本: ' + (bt.version || '未知')
               + (bt.fullVersion ? '，完整信息: ' + bt.fullVersion : '');
             vm.log('获取 BarTender 实例成功: 版本=' + (bt.version || '未知'), 'success');
-          }).catch(function (e) { vm.log('获取 BarTender 实例失败: ' + e.message, 'error'); });
+          }).catch(function (e) {
+            var msg = e.message || '获取 BarTender 实例失败';
+            vm.btInstance = null;
+            vm.btInstanceInfo = msg;
+            vm.log(msg, 'warn');
+          });
+        },
+        btListTemplates: function () {
+          var vm = this;
+          this.log('列出 BarTender 模板...', 'info');
+          this.sdk.getBartenderInstance().then(function (bt) {
+            vm.btInstance = bt;
+            return bt.listTemplates();
+          }).then(function (res) {
+            if (!res.templates || !res.templates.length) {
+              vm.btTemplateOptions = [];
+              vm.btTemplate = '';
+              vm.btTemplatesResult = 'reports/bt 目录下未找到 .btw 模板';
+              vm.log('reports/bt 目录下未找到模板', 'error');
+              return;
+            }
+            vm.btTemplateOptions = res.templates.map(function (t) {
+              return { file: t.file, label: t.name + '（' + (t.size / 1024).toFixed(1) + ' KB）' };
+            });
+            vm.btTemplate = vm.btTemplateOptions[0].file;
+            vm.btTemplatesResult = '找到 ' + res.templates.length + ' 个模板：' + res.templates.map(function (t) { return t.name; }).join(', ');
+            vm.log('找到 ' + res.templates.length + ' 个 BarTender 模板', 'success');
+          }).catch(function (e) {
+            var msg = e.message || '列出模板失败';
+            vm.btTemplatesResult = msg;
+            vm.log(msg, 'warn');
+          });
         },
         btGetParams: function () {
           var vm = this;
-          if (!this.btTemplate) { this.log('请先填写模板路径', 'warn'); return; }
+          if (!this.btTemplate) { this.log('请先选择模板', 'warn'); return; }
           if (!this.btInstance) { this.log('请先点击「获取 BarTender 实例」', 'warn'); return; }
           this.btInstance.getTemplateParams(this.btTemplate).then(function (r) {
             var list = r.params || [];
@@ -396,7 +436,7 @@ methods: {
         },
         btGetImage: function () {
           var vm = this;
-          if (!this.btTemplate) { this.log('请先填写模板路径', 'warn'); return; }
+          if (!this.btTemplate) { this.log('请先选择模板', 'warn'); return; }
           if (!this.btInstance) { this.log('请先点击「获取 BarTender 实例」', 'warn'); return; }
           this.btInstance.getTemplateImage(this.btTemplate).then(function (r) {
             vm.showBtImage(r.image);
@@ -405,7 +445,7 @@ methods: {
         },
         btGetImageWithParams: function () {
           var vm = this;
-          if (!this.btTemplate) { this.log('请先填写模板路径', 'warn'); return; }
+          if (!this.btTemplate) { this.log('请先选择模板', 'warn'); return; }
           if (!this.btInstance) { this.log('请先点击「获取 BarTender 实例」', 'warn'); return; }
           var params = {};
           try { params = JSON.parse(this.btParamsText || '{}'); } catch (e) { params = {}; }

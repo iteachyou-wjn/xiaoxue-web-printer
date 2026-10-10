@@ -12,10 +12,12 @@ import cn.databytes.bartender.constant.NameType;
 import cn.databytes.bartender.constant.ObjectType;
 import cn.databytes.bartender.constant.Resolution;
 import cn.databytes.bartender.constant.SaveOptions;
+import cc.iteachyou.printservice.print.TemplateDirs;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.ByteArrayOutputStream;
+import java.io.File;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
@@ -129,6 +131,30 @@ public final class BartenderManager {
     }
 
     // ================= 模板操作 =================
+
+    /**
+     * 列出 reports/bt 目录下所有 .btw 模板（仅扫描目录，不要求 BarTender 已连接）。
+     */
+    public static List<Map<String, String>> listTemplates() {
+        List<Map<String, String>> result = new ArrayList<>();
+        File dir = TemplateDirs.bartenderDir();
+        if (dir == null) {
+            log.info("reports/bt 目录不存在");
+            return result;
+        }
+        File[] files = dir.listFiles((d, name) -> name.toLowerCase().endsWith(".btw"));
+        if (files != null) {
+            for (File f : files) {
+                Map<String, String> m = new HashMap<>();
+                m.put("name", f.getName());
+                m.put("file", f.getName());
+                m.put("size", String.valueOf(f.length()));
+                result.add(m);
+            }
+        }
+        log.info("找到 BarTender 模板 {} 个", result.size());
+        return result;
+    }
 
     /**
      * 预览：打开模板、应用参数并渲染为 PNG 图片（无原生预览 API，用图片导出实现）。
@@ -376,13 +402,52 @@ public final class BartenderManager {
         if (svc == null) {
             return null;
         }
+        String resolved;
         try {
-            String p = (printerName == null || printerName.trim().isEmpty()) ? "" : printerName.trim();
-            return svc.openTemplate(templateFile, p);
-        } catch (Throwable e) {
-            log.error("打开 BarTender 模板失败: {}", templateFile, e);
+            resolved = resolveTemplateFile(templateFile);
+        } catch (Exception e) {
+            log.error("解析 BarTender 模板失败: {}", e.getMessage());
             return null;
         }
+        try {
+            String p = (printerName == null || printerName.trim().isEmpty()) ? "" : printerName.trim();
+            return svc.openTemplate(resolved, p);
+        } catch (Throwable e) {
+            log.error("打开 BarTender 模板失败: {}", resolved, e);
+            return null;
+        }
+    }
+
+    /**
+     * 只从 reports/bt 读取模板。传入文件名即可，带目录时也只取文件名，避免读到目录外。
+     */
+    private static String resolveTemplateFile(String templateFile) throws Exception {
+        if (templateFile == null || templateFile.trim().isEmpty()) {
+            throw new IllegalArgumentException("BarTender 模板名不能为空");
+        }
+        String fileName = new File(templateFile.trim()).getName();
+        File dir = TemplateDirs.bartenderDir();
+        if (dir == null) {
+            throw new IllegalArgumentException(
+                    "reports/bt 目录不存在。本地调试请放在 resources/reports/bt，安装后请放在安装目录 reports/bt");
+        }
+        File target = new File(dir, fileName);
+        if (!target.isFile() && !fileName.toLowerCase().endsWith(".btw")) {
+            File withExt = new File(dir, fileName + ".btw");
+            if (withExt.isFile()) {
+                target = withExt;
+            }
+        }
+        if (!target.isFile()) {
+            throw new IllegalArgumentException("BarTender 模板不存在: " + fileName);
+        }
+        File canonicalDir = dir.getCanonicalFile();
+        File canonicalTarget = target.getCanonicalFile();
+        if (!canonicalTarget.toPath().startsWith(canonicalDir.toPath())) {
+            throw new IllegalArgumentException("非法模板路径: " + fileName);
+        }
+        log.info("使用 BarTender 模板: {}", canonicalTarget.getAbsolutePath());
+        return canonicalTarget.getAbsolutePath();
     }
 
     /** 关闭模板（容错） */

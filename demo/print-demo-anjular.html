@@ -44,6 +44,7 @@
       <div class="tab" data-tab="html" onclick="switchTab('html')">HTML</div>
       <div class="tab" data-tab="task" onclick="switchTab('task')">打印任务</div>
       <div class="tab" data-tab="bartender" onclick="switchTab('bartender')">BarTender</div>
+              <div class="tab" data-tab="jasper" onclick="switchTab('jasper')">JasperReport</div>
       <div class="tab" data-tab="code" onclick="switchTab('code')">集成代码</div>
     </div>
 
@@ -149,7 +150,7 @@
 <span class="kw">export class</span> <span class="fn">PrintService</span> {
   <span class="kw">private</span> sdk: <span class="kw">any</span>;
   <span class="kw">constructor</span>() {
-    <span class="kw">this</span>.sdk = <span class="kw">new</span> XiaoxuePrinterSDK({ url: <span class="str">'ws://localhost:54321'</span> });
+    <span class="kw">this</span>.sdk = <span class="kw">new</span> XiaoxuePrinterSDK({ url: <span class="str">'ws://127.0.0.1:54321'</span> });
   }
   connect()      { <span class="kw">this</span>.sdk.connect(); }
   disconnect()   { <span class="kw">this</span>.sdk.disconnect(); }
@@ -204,7 +205,7 @@
   <span class="kw">readonly</span> tasks$ = <span class="kw">new</span> BehaviorSubject&lt;<span class="kw">any</span>[]&gt;([]);
 
   <span class="kw">constructor</span>() {
-    <span class="kw">this</span>.sdk = <span class="kw">new</span> XiaoxuePrinterSDK({ url: <span class="str">'ws://localhost:54321'</span> });
+    <span class="kw">this</span>.sdk = <span class="kw">new</span> XiaoxuePrinterSDK({ url: <span class="str">'ws://127.0.0.1:54321'</span> });
     <span class="kw">this</span>.sdk.on(<span class="str">'taskListUpdate'</span>, (list: <span class="kw">any</span>[]) =&gt; <span class="kw">this</span>.tasks$.next(list || []));
   }
   connect()      { <span class="kw">this</span>.sdk.connect(); }
@@ -271,6 +272,36 @@ private buildBartenderRequest() {
 
 doPreview() { this.print.preview(this.buildBartenderRequest()); }  // 打印预览
 doPrint()   { this.print.print(this.buildBartenderRequest()); }    // 执行打印</pre>
+    </div>
+    <div class="tab-panel" data-panel="jasper">
+      <h2>JasperReport 集成（Angular）</h2>
+      <p>通过 <code>content.type = 'jasper'</code> 提交报表模板，服务端从安装目录 <code>reports/jr</code> 加载 .jasper/.jrxml 模板，用 JSON 参数和明细数据填充后生成 PDF：</p>
+      <ol>
+        <li>模板文件放安装目录 <code>reports/jr</code> 下</li>
+        <li><code>value</code> 填模板文件名（如 picking-slip.jasper）</li>
+        <li><code>params</code> 是报表参数（对应模板 ${} 字段）</li>
+        <li><code>data</code> 是明细数组（对应 Detail band）</li>
+      </ol>
+      <h2>在 Angular 中使用</h2>
+      <pre>// 构建 JasperReport 请求
+private buildJasperRequest() {
+  const params = JSON.parse(this.jrParamsText || '{}');
+  const data = JSON.parse(this.jrDataText || '[]');
+  return {
+    printer: this.printer,
+    style: { paper: 'A4', direction: 'vertical' },
+    content: {
+      type: 'jasper',              // 关键：JasperReport 类型
+      value: 'picking-slip.jasper', // 模板文件名
+      params: params,              // 报表参数
+      data: data                  // 明细数据数组
+    }
+  };
+}
+
+doPreview() { this.print.preview(this.buildJasperRequest()); }
+doPrint()   { this.print.print(this.buildJasperRequest()); }</pre>
+      <div class="hint">二维码通过 params.qrContent 传入，模板自动渲染二维码图片。</div>
     </div>
   </div>
 

@@ -1,0 +1,14 @@
+{
+  "name": "dreamer-printer-web",
+  "version": "1.0.0",
+  "description": "梦想家WEB打印控件 - 官方文档与介绍站点（VitePress）",
+  "type": "module",
+  "scripts": {
+    "docs:dev": "vitepress dev docs",
+    "docs:build": "vitepress build docs",
+    "docs:preview": "vitepress preview docs"
+  },
+  "devDependencies": {
+    "vitepress": "^1.6.4"
+  }
+}

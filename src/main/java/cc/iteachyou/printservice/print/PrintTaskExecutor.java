@@ -1,7 +1,9 @@
 package cc.iteachyou.printservice.print;
 
 import cc.iteachyou.printservice.print.bartender.BartenderManager;
+import cc.iteachyou.printservice.print.jasper.JasperReportManager;
 import cc.iteachyou.printservice.websocket.PrintTask;
+import com.alibaba.fastjson2.JSONArray;
 import com.alibaba.fastjson2.JSONObject;
 import org.apache.pdfbox.pdmodel.PDDocument;
 import org.apache.pdfbox.printing.PDFPageable;
@@ -9,7 +11,10 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.awt.print.PrinterJob;
+import java.io.ByteArrayInputStream;
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import javax.print.PrintService;
 import javax.print.PrintServiceLookup;
@@ -49,6 +54,10 @@ public class PrintTaskExecutor {
             executeBartender(task, content);
             return;
         }
+        if ("jasper".equalsIgnoreCase(contentType)) {
+            executeJasper(task, content);
+            return;
+        }
         try (PDDocument doc = HtmlRenderService.render(style, content)) {
             PrinterJob job = PrinterJob.getPrinterJob();
 
@@ -85,6 +94,34 @@ public class PrintTaskExecutor {
         log.info("BarTender 打印完成，任务: {}", task.getId());
     }
 
+    /**
+     * JasperReport 类型打印：填充模板 → PDF → PDFPageable 打印。
+     *
+     * @param task    打印任务
+     * @param content 内容对象（type: jasper, value: 模板文件名, params: 参数 Map, data: 列表数据）
+     */
+    private static void executeJasper(PrintTask task, JSONObject content) throws Exception {
+        String template = content.getString("value");
+        if (template == null || template.trim().isEmpty()) {
+            throw new IllegalArgumentException("JasperReport 模板名不能为空");
+        }
+        Map<String, Object> params = extractObjectParams(content);
+        List<Map<String, Object>> data = extractDataList(content);
+        byte[] pdf = JasperReportManager.fillToPdf(template, params, data);
+
+        try (PDDocument doc = PDDocument.load(new ByteArrayInputStream(pdf))) {
+            PrinterJob job = PrinterJob.getPrinterJob();
+            PrintService service = findPrintService(task.getPrinterName());
+            if (service != null) {
+                job.setPrintService(service);
+                log.info("使用打印机: {}", service.getName());
+            }
+            job.setPageable(new PDFPageable(doc));
+            job.print();
+        }
+        log.info("JasperReport 打印完成，任务: {}", task.getId());
+    }
+
     /** 从 content.params 提取模板字段值 */
     private static Map<String, String> extractParams(JSONObject content) {
         Map<String, String> params = new HashMap<>();
@@ -96,6 +133,35 @@ public class PrintTaskExecutor {
             }
         }
         return params;
+    }
+
+    /** 从 content.params 提取 Object 类型参数（JasperReport 需要保留类型） */
+    @SuppressWarnings("unchecked")
+    private static Map<String, Object> extractObjectParams(JSONObject content) {
+        Map<String, Object> params = new HashMap<>();
+        JSONObject p = content != null ? content.getJSONObject("params") : null;
+        if (p != null) {
+            for (String key : p.keySet()) {
+                params.put(key, p.get(key));
+            }
+        }
+        return params;
+    }
+
+    /** 从 content.data 提取列表数据（JasperReport JRBeanCollectionDataSource） */
+    @SuppressWarnings("unchecked")
+    private static List<Map<String, Object>> extractDataList(JSONObject content) {
+        List<Map<String, Object>> list = new ArrayList<>();
+        JSONArray arr = content != null ? content.getJSONArray("data") : null;
+        if (arr != null) {
+            for (int i = 0; i < arr.size(); i++) {
+                Object o = arr.get(i);
+                if (o instanceof JSONObject) {
+                    list.add(new HashMap<>(((JSONObject) o)));
+                }
+            }
+        }
+        return list;
     }
 
     private static PrintService findPrintService(String name) {

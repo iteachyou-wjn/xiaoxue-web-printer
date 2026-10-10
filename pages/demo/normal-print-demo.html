@@ -132,12 +132,19 @@
 
       <div class="tab-panel" data-panel="bartender">
         <div class="form-item full">
-          <label>BarTender 模板路径 (.btw)</label>
-          <input id="btTemplate" placeholder="如：D:\labels\mylabel.btw">
+          <label>BarTender 模板（reports/bt 目录下）</label>
+          <select id="btTemplate"><option value="">请先点击「列出模板」</option></select>
         </div>
         <div class="form-item full" style="margin-top:12px;">
           <label>模板字段 (JSON，可选)</label>
           <textarea id="btParams" style="min-height:120px" placeholder='如：{"字段1":"值1","字段2":"值2"}'>{&quot;字段1&quot;:&quot;值1&quot;,&quot;字段2&quot;:&quot;值2&quot;}</textarea>
+        </div>
+
+        <div class="form-item full" style="margin-top:12px;">
+          <div class="actions">
+            <button class="btn btn-primary" id="btnBtTemplates">列出模板</button>
+          </div>
+          <div id="btTemplatesResult" class="hint" style="margin-top:8px;">（模板列表将显示在这里）</div>
         </div>
 
         <div class="form-item full" style="margin-top:16px;">
@@ -356,8 +363,38 @@
         .catch(function (e) { log('打印失败: ' + e.message, 'error'); });
     });
 
-    // ---------- BarTender 实例示例 ----------
+    // ---------- BarTender 示例 ----------
     var btInstance = null;
+
+    $('btnBtTemplates').addEventListener('click', function () {
+      log('列出 BarTender 模板...', 'info');
+      sdk.getBartenderInstance().then(function (bt) {
+        btInstance = bt;
+        return bt.listTemplates();
+      }).then(function (res) {
+        var sel = $('btTemplate');
+        sel.innerHTML = '';
+        if (!res.templates || res.templates.length === 0) {
+          var opt = document.createElement('option');
+          opt.value = ''; opt.textContent = '（reports/bt 目录无模板）';
+          sel.appendChild(opt);
+          $('btTemplatesResult').textContent = 'reports/bt 目录下未找到 .btw 模板';
+          log('reports/bt 目录下未找到模板', 'error');
+          return;
+        }
+        res.templates.forEach(function (t) {
+          var opt = document.createElement('option');
+          opt.value = t.file; opt.textContent = t.name + '（' + (t.size / 1024).toFixed(1) + ' KB）';
+          sel.appendChild(opt);
+        });
+        $('btTemplatesResult').textContent = '找到 ' + res.templates.length + ' 个模板：' + res.templates.map(function (t) { return t.name; }).join(', ');
+        log('找到 ' + res.templates.length + ' 个 BarTender 模板', 'success');
+      }).catch(function (e) {
+        var msg = e.message || '列出模板失败';
+        $('btTemplatesResult').textContent = msg;
+        log(msg, 'warn');
+      });
+    });
 
     function showBtImage(base64) {
       var img = $('btPreviewImg');
@@ -377,12 +414,16 @@
           + '，版本: ' + (bt.version || '未知')
           + (bt.fullVersion ? '，完整信息: ' + bt.fullVersion : '');
         log('获取 BarTender 实例成功: 版本=' + (bt.version || '未知'), 'success');
-      }).catch(function (e) { log('获取 BarTender 实例失败: ' + e.message, 'error'); });
+      }).catch(function (e) {
+        var msg = e.message || '获取 BarTender 实例失败';
+        $('btInstanceInfo').textContent = msg;
+        log(msg, 'warn');
+      });
     });
 
     $('btnBtParams').addEventListener('click', function () {
       var path = $('btTemplate').value;
-      if (!path) { log('请先填写模板路径', 'warn'); return; }
+      if (!path) { log('请先选择模板', 'warn'); return; }
       if (!btInstance) { log('请先点击「获取 BarTender 实例」', 'warn'); return; }
       log('获取模板参数: ' + path, 'info');
       btInstance.getTemplateParams(path).then(function (r) {
@@ -397,7 +438,7 @@
 
     $('btnBtImage').addEventListener('click', function () {
       var path = $('btTemplate').value;
-      if (!path) { log('请先填写模板路径', 'warn'); return; }
+      if (!path) { log('请先选择模板', 'warn'); return; }
       if (!btInstance) { log('请先点击「获取 BarTender 实例」', 'warn'); return; }
       log('获取模板图像: ' + path, 'info');
       btInstance.getTemplateImage(path).then(function (r) {
@@ -408,7 +449,7 @@
 
     $('btnBtImageWithParams').addEventListener('click', function () {
       var path = $('btTemplate').value;
-      if (!path) { log('请先填写模板路径', 'warn'); return; }
+      if (!path) { log('请先选择模板', 'warn'); return; }
       if (!btInstance) { log('请先点击「获取 BarTender 实例」', 'warn'); return; }
       var params = {};
       try { params = JSON.parse($('btParams').value || '{}'); } catch (e) { params = {}; }

@@ -1,0 +1,102 @@
+/*
+ * 站点自定义样式
+ */
+
+/* ===== 主题色：改为 Logo 的绿色（#04A858） ===== */
+:root {
+  --vp-c-brand-1: #04a858;
+  --vp-c-brand-2: #03914d;
+  --vp-c-brand-3: #027b41;
+  --vp-c-brand-soft: rgba(4, 168, 88, 0.16);
+}
+
+.dark {
+  --vp-c-brand-1: #3ddc97;
+  --vp-c-brand-2: #04a858;
+  --vp-c-brand-3: #02964f;
+  --vp-c-brand-soft: rgba(61, 220, 151, 0.16);
+}
+
+/* ===== 首页 hero 主标题：下方间距 + 加粗 + Logo 深浅绿色动态渐变 ===== */
+.VPHero .main .name {
+  margin-bottom: 18px !important;
+  font-weight: 800;
+  background: linear-gradient(120deg, #05d028 0%, #04a858 45%, #039f65 100%);
+  background-size: 200% auto;
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  -webkit-text-fill-color: transparent;
+  animation: dreamer-name-gradient 5s ease-in-out infinite;
+}
+
+@keyframes dreamer-name-gradient {
+  0% {
+    background-position: 0% center;
+  }
+  50% {
+    background-position: 100% center;
+  }
+  100% {
+    background-position: 0% center;
+  }
+}
+
+/* ===== 首页 hero：文字左、图片右，flex 两端对齐（取消绝对定位） ===== */
+.VPHero .container {
+  display: flex;
+  flex-direction: row;
+  justify-content: space-between;
+  align-items: center;
+  max-width: 1152px;
+}
+
+.VPHero .main {
+  order: 1;
+  flex: 1 1 auto;
+  min-width: 0;
+  margin-right: 40px;
+}
+
+.VPHero .image {
+  position: static;
+  order: 2;
+  flex: 0 1 300px;
+  width: 300px;
+  margin: 0;
+}
+
+.VPHero .image-container {
+  width: 100%;
+  max-width: 320px;
+  height: 320px;
+  margin: 0 auto;
+  transform: none;
+}
+
+/* 文字靠左，取消堆叠布局下的居中 */
+.VPHero.has-image .container {
+  text-align: left;
+}
+
+.VPHero.has-image .name,
+.VPHero.has-image .text,
+.VPHero.has-image .tagline,
+.VPHero.has-image .actions {
+  margin-left: 0;
+  margin-right: 0;
+}
+
+/* ===== 首页 hero 副标题“让浏览器真正打得出、打得准”：32px + 字距 8px ===== */
+.VPHero .main .text {
+  font-size: 32px;
+  line-height: 40px;
+  letter-spacing: 8px;
+}
+
+/* ===== 首页 hero 标语：20px，宽度 525px ===== */
+.VPHero .main .tagline {
+  font-size: 20px;
+  line-height: 30px;
+  max-width: 525px;
+}

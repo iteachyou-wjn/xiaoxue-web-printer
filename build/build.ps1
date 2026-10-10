@@ -39,7 +39,7 @@ $pgLogCor = Join-Path $toolsDir 'log4j-core-2.20.0.jar'
 
 function Ensure-Tool([string]$Dest, [string]$Repo, [string]$Url) {
     if (-not (Test-Path $Dest)) {
-        if (Test-Path $Repo) { Copy-Item $Repo $Dest; Write-Host "  准备工具: $(Split-Path $Dest -Leaf)" }
+        if ($Repo -and (Test-Path $Repo)) { Copy-Item $Repo $Dest; Write-Host "  准备工具: $(Split-Path $Dest -Leaf)" }
         elseif ($Url) { & curl.exe -sL -o $Dest $Url; Write-Host "  下载工具: $(Split-Path $Dest -Leaf)" }
     }
 }
@@ -60,10 +60,11 @@ $issText = [System.IO.File]::ReadAllText($issPath)
 $issText = $issText -replace '#define MyAppVersion "[^"]*"', "#define MyAppVersion `"$Version`""
 [System.IO.File]::WriteAllText($issPath, $issText, (New-Object System.Text.UTF8Encoding($false)))
 
+$utf8 = New-Object System.Text.UTF8Encoding($false)
 $pgPath = Join-Path $PSScriptRoot 'proguard.pro'
-$pgText = [System.IO.File]::ReadAllText($pgPath)
+$pgText = [System.IO.File]::ReadAllText($pgPath, $utf8)
 $pgText = $pgText -replace 'dreamer-print-service-\d+\.\d+\.\d+', "dreamer-print-service-$Version"
-[System.IO.File]::WriteAllText($pgPath, $pgText, (New-Object System.Text.UTF8Encoding($false)))
+[System.IO.File]::WriteAllText($pgPath, $pgText, $utf8)
 
 # ---------- 2/6 Maven 构建 ----------
 Write-Host "[2/6] Maven 构建 (clean package) ..."
@@ -91,7 +92,30 @@ $thinJar = Join-Path $inputDir "dreamer-print-service-$Version.jar"
 Copy-Item (Join-Path $root "target\original-dreamer-print-service-$Version.jar") $thinJar
 Copy-Item (Join-Path $libsDir '*.jar') $inputDir
 
+# 按本次实际依赖重写 libraryjars，避免新增 jar（如 JasperReports）漏配导致混淆失败
+$utf8 = New-Object System.Text.UTF8Encoding($false)
+$libLines = New-Object System.Collections.Generic.List[string]
+Get-ChildItem $libsDir -Filter *.jar | Sort-Object Name | ForEach-Object {
+    if ($_.Name -like 'bartender-printer-sdk-*.jar') {
+        $libLines.Add("-libraryjars libs/$($_.Name)(!cn/databytes/bartender/JbtCob.class)")
+    } else {
+        $libLines.Add("-libraryjars libs/$($_.Name)")
+    }
+}
+if ($libLines.Count -eq 0) { throw 'build/libs 下没有依赖 jar' }
+$pgText = [System.IO.File]::ReadAllText($pgPath, $utf8)
+if ($pgText -notmatch '(?s)# BEGIN_LIBS\r?\n.*?# END_LIBS') {
+    throw 'proguard.pro 中找不到 BEGIN_LIBS / END_LIBS 标记'
+}
+$libBlock = ($libLines -join "`r`n")
+# Regex 替换串里 $ 有特殊含义，jar 名若含 $ 必须转成 $$
+$replacement = ("# BEGIN_LIBS`r`n$libBlock`r`n# END_LIBS").Replace('$', '$$')
+$updated = [regex]::Replace($pgText, '(?s)# BEGIN_LIBS\r?\n.*?# END_LIBS', $replacement)
+[System.IO.File]::WriteAllText($pgPath, $updated, $utf8)
+Write-Host "  已写入 $($libLines.Count) 个依赖 library jar"
+
 & $java -cp "$pgBase;$pgCore;$pgLogApi;$pgLogCor" proguard.ProGuard "@$pgPath"
+if ($LASTEXITCODE -ne 0) { throw 'ProGuard 混淆失败' }
 $obfJar = Join-Path $inputDir "dreamer-print-service-$Version-obf.jar"
 if (-not (Test-Path $obfJar)) { throw 'ProGuard 混淆失败' }
 Remove-Item $thinJar
@@ -106,6 +130,31 @@ Remove-Item -Recurse -Force $appImage -ErrorAction SilentlyContinue
     --main-class cc.iteachyou.printservice.MainApp `
     --icon (Join-Path $PSScriptRoot 'dreamer-print.ico') --dest $appImage
 if ($LASTEXITCODE -ne 0) { throw 'jpackage 失败' }
+
+# jpackage 布局：安装目录/晓雪WEB打印控件.exe，主 jar 在安装目录/app/。
+# reports、fonts 放到安装目录（与 exe 同级），安装后从这里读取，不读 jar 内资源。
+$installRoot = Join-Path $appImage '晓雪WEB打印控件'
+if (-not (Test-Path $installRoot)) { throw 'jpackage 未生成安装目录' }
+
+function Copy-InstallResourceDir([string]$Name, [string[]]$Extensions, [bool]$Required = $true) {
+    $dest = Join-Path $installRoot $Name
+    New-Item -ItemType Directory -Force $dest | Out-Null
+    $src = Join-Path $root "src\main\resources\$Name"
+    $files = @(Get-ChildItem $src -File -ErrorAction SilentlyContinue |
+        Where-Object { $Extensions -contains $_.Extension.ToLower() })
+    if ($files.Count -eq 0) {
+        if ($Required) { throw "src/main/resources/$Name 下没有所需文件" }
+        Write-Host "  已创建安装目录\$Name"
+        return
+    }
+    Copy-Item $files.FullName $dest -Force
+    Write-Host "  已复制 $($files.Count) 个文件到安装目录\$Name"
+}
+
+Write-Host "  复制 reports/jr、reports/bt、fonts 到安装目录 ..."
+Copy-InstallResourceDir 'reports\jr' @('.jasper', '.jrxml') $true
+Copy-InstallResourceDir 'reports\bt' @('.btw') $false
+Copy-InstallResourceDir 'fonts' @('.ttf', '.ttc', '.otf') $true
 
 # ---------- 6/6 Inno Setup ----------
 Write-Host "[6/6] Inno Setup 编译安装包 ..."

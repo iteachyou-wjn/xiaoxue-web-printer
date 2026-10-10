@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<fontFamilies>
+    <fontFamily name="微软雅黑">
+        <normal><font>fonts/msyh.ttf</font></normal>
+        <bold><font>fonts/msyh.ttf</font></bold>
+        <italic><font>fonts/msyh.ttf</font></italic>
+        <pdf><font>fonts/msyh.ttf</font></pdf>
+        <pdfEncoding>Identity-H</pdfEncoding>
+        <pdfEmbedded>true</pdfEmbedded>
+    </fontFamily>
+    <fontFamily name="SimHei">
+        <normal><font>fonts/simhei.ttf</font></normal>
+        <bold><font>fonts/simhei.ttf</font></bold>
+        <italic><font>fonts/simhei.ttf</font></italic>
+        <pdf><font>fonts/simhei.ttf</font></pdf>
+        <pdfEncoding>Identity-H</pdfEncoding>
+        <pdfEmbedded>true</pdfEmbedded>
+    </fontFamily>
+</fontFamilies>

@@ -49,6 +49,7 @@ import cc.iteachyou.printservice.print.HtmlRenderService;
 import cc.iteachyou.printservice.print.PaperSizeUtil;
 import cc.iteachyou.printservice.print.PrintTaskExecutor;
 import cc.iteachyou.printservice.print.bartender.BartenderManager;
+import cc.iteachyou.printservice.print.jasper.JasperReportManager;
 import cc.iteachyou.printservice.util.AppIcons;
 import cc.iteachyou.printservice.websocket.PrintTask;
 import cc.iteachyou.printservice.websocket.PrintWebSocketServer;
@@ -324,6 +325,14 @@ public class PreviewDialog {
                 if ("bartender".equalsIgnoreCase(ctype)) {
                     // BarTender 类型：渲染模板图片作为预览
                     imgs = renderBartenderImages();
+                } else if ("jasper".equalsIgnoreCase(ctype)) {
+                    // JasperReport 类型：填充模板 -> PDF -> 分页渲染图片
+                    byte[] pdf = renderJasperPdf();
+                    doc = PDDocument.load(new ByteArrayInputStream(pdf));
+                    imgs = new ArrayList<>();
+                    for (int i = 0; i < doc.getNumberOfPages(); i++) {
+                        imgs.add(HtmlRenderService.renderPageImage(doc, i, HtmlRenderService.PREVIEW_DPI));
+                    }
                 } else {
                     doc = HtmlRenderService.render(style, content);
                     imgs = new ArrayList<>();
@@ -420,6 +429,37 @@ public class PreviewDialog {
     /**
      * 从 content.params 提取 BarTender 模板字段值。
      */
+
+    /**
+     * 填充 JasperReport 模板生成 PDF 字节。
+     * content.value = 模板文件名，content.params = 参数，content.data = 列表数据。
+     */
+    private byte[] renderJasperPdf() throws Exception {
+        if (content == null) {
+            throw new IOException("JasperReport 内容为空");
+        }
+        String template = content.getString("value");
+        if (template == null || template.trim().isEmpty()) {
+            throw new IOException("JasperReport 模板名不能为空");
+        }
+        Map<String, Object> params = new HashMap<>();
+        JSONObject p = content.getJSONObject("params");
+        if (p != null) {
+            for (String k : p.keySet()) { params.put(k, p.get(k)); }
+        }
+        List<Map<String, Object>> data = new ArrayList<>();
+        com.alibaba.fastjson2.JSONArray arr = content.getJSONArray("data");
+        if (arr != null) {
+            for (int i = 0; i < arr.size(); i++) {
+                Object o = arr.get(i);
+                if (o instanceof JSONObject) { data.add(new HashMap<>((JSONObject) o)); }
+            }
+        }
+        byte[] pdf = JasperReportManager.fillToPdf(template, params, data);
+        log.info("JasperReport 预览渲染完成: {} ({} bytes)", template, pdf.length);
+        return pdf;
+    }
+
     private Map<String, String> bartenderParams() {
         Map<String, String> params = new HashMap<>();
         JSONObject p = content != null ? content.getJSONObject("params") : null;

@@ -85,6 +85,8 @@
       const [paperFooter, setPaperFooter] = useState('');
       const [logs, setLogs] = useState([]);
   const [btTemplate, setBtTemplate] = useState('');
+  const [btTemplateOptions, setBtTemplateOptions] = useState([]);
+  const [btTemplatesResult, setBtTemplatesResult] = useState('（模板列表将显示在这里）');
   const [btParamsText, setBtParamsText] = useState('');
   const [btInstance, setBtInstance] = useState(null);
   const [btInstanceInfo, setBtInstanceInfo] = useState('（点击「获取 BarTender 实例」查看版本信息）');
@@ -171,10 +173,42 @@
           setBtInstanceInfo('BarTender 可用: ' + bt.available + '，版本: ' + (bt.version || '未知')
             + (bt.fullVersion ? '，完整信息: ' + bt.fullVersion : ''));
           log('获取 BarTender 实例成功: 版本=' + (bt.version || '未知'), 'success');
-        }).catch(e => log('获取 BarTender 实例失败: ' + e.message, 'error'));
+        }).catch(e => {
+          const msg = e.message || '获取 BarTender 实例失败';
+          setBtInstance(null);
+          setBtInstanceInfo(msg);
+          log(msg, 'warn');
+        });
+      };
+      const onBtListTemplates = function () {
+        log('列出 BarTender 模板...', 'info');
+        sdkRef.current.getBartenderInstance().then(bt => {
+          setBtInstance(bt);
+          return bt.listTemplates();
+        }).then(res => {
+          if (!res.templates || !res.templates.length) {
+            setBtTemplateOptions([]);
+            setBtTemplate('');
+            setBtTemplatesResult('reports/bt 目录下未找到 .btw 模板');
+            log('reports/bt 目录下未找到模板', 'error');
+            return;
+          }
+          const opts = res.templates.map(t => ({
+            file: t.file,
+            label: t.name + '（' + (t.size / 1024).toFixed(1) + ' KB）'
+          }));
+          setBtTemplateOptions(opts);
+          setBtTemplate(opts[0].file);
+          setBtTemplatesResult('找到 ' + res.templates.length + ' 个模板：' + res.templates.map(t => t.name).join(', '));
+          log('找到 ' + res.templates.length + ' 个 BarTender 模板', 'success');
+        }).catch(e => {
+          const msg = e.message || '列出模板失败';
+          setBtTemplatesResult(msg);
+          log(msg, 'warn');
+        });
       };
       const onBtParams = function () {
-        if (!btTemplate) { log('请先填写模板路径', 'warn'); return; }
+        if (!btTemplate) { log('请先选择模板', 'warn'); return; }
         if (!btInstance) { log('请先点击「获取 BarTender 实例」', 'warn'); return; }
         btInstance.getTemplateParams(btTemplate).then(r => {
           const list = r.params || [];
@@ -184,7 +218,7 @@
         }).catch(e => log('获取模板参数失败: ' + e.message, 'error'));
       };
       const onBtImage = function () {
-        if (!btTemplate) { log('请先填写模板路径', 'warn'); return; }
+        if (!btTemplate) { log('请先选择模板', 'warn'); return; }
         if (!btInstance) { log('请先点击「获取 BarTender 实例」', 'warn'); return; }
         btInstance.getTemplateImage(btTemplate).then(r => {
           setBtPreviewImg(r.image ? 'data:image/png;base64,' + r.image : '');
@@ -192,7 +226,7 @@
         }).catch(e => log('获取模板图像失败: ' + e.message, 'error'));
       };
       const onBtImageWithParams = function () {
-        if (!btTemplate) { log('请先填写模板路径', 'warn'); return; }
+        if (!btTemplate) { log('请先选择模板', 'warn'); return; }
         if (!btInstance) { log('请先点击「获取 BarTender 实例」', 'warn'); return; }
         let params = {};
         try { params = JSON.parse(btParamsText || '{}'); } catch (e) { params = {}; }
@@ -417,13 +451,22 @@ export default function TaskList() {
             {activeTab === 'bartender' && (
               <div>
                 <div className="form-item full">
-                  <label>BarTender 模板路径 (.btw)</label>
-                  <input value={btTemplate} onChange={e => setBtTemplate(e.target.value)} placeholder="如：D:\labels\mylabel.btw" />
+                  <label>BarTender 模板（reports/bt 目录下）</label>
+                  <select value={btTemplate} onChange={e => setBtTemplate(e.target.value)}>
+                    <option value="">请先点击「列出模板」</option>
+                    {btTemplateOptions.map(t => (
+                      <option key={t.file} value={t.file}>{t.label}</option>
+                    ))}
+                  </select>
                 </div>
                 <div className="form-item full" style={{ marginTop: 12 }}>
                   <label>模板字段 (JSON，可选)</label>
                   <textarea style={{ minHeight: 120 }} value={btParamsText} onChange={e => setBtParamsText(e.target.value)} placeholder='如：{"字段1":"值1"}' />
                 </div>
+                <div className="actions" style={{ marginTop: 12 }}>
+                  <button className="btn btn-primary" disabled={!connected} onClick={onBtListTemplates}>列出模板</button>
+                </div>
+                <div className="hint" style={{ marginTop: 8 }}>{btTemplatesResult}</div>
                 <div className="actions" style={{ marginTop: 16, flexWrap: 'wrap' }}>
                   <button className="btn btn-primary" disabled={!connected} onClick={onBtInstance}>获取 BarTender 实例</button>
                   <button className="btn btn-success" disabled={!connected} onClick={onBtParams}>获取模板参数</button>

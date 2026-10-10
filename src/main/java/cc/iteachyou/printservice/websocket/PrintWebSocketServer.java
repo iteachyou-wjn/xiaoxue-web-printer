@@ -2,6 +2,7 @@ package cc.iteachyou.printservice.websocket;
 
 import cc.iteachyou.printservice.print.PrintTaskExecutor;
 import cc.iteachyou.printservice.print.bartender.BartenderManager;
+import cc.iteachyou.printservice.print.jasper.JasperReportManager;
 import cc.iteachyou.printservice.ui.PreviewDialog;
 import cc.iteachyou.printservice.util.LicenseManager;
 import com.alibaba.fastjson2.JSON;
@@ -125,9 +126,11 @@ public class PrintWebSocketServer extends WebSocketServer {
                 case "doPrint" -> handleDoPrint(conn, request);
                 case "doPreview" -> handleDoPreview(conn, request);
                 case "bartenderInstance" -> handleBartenderInstance(conn);
+                case "bartenderTemplates" -> handleBartenderTemplates(conn);
                 case "bartenderTemplateParams" -> handleBartenderTemplateParams(conn, request);
                 case "bartenderTemplateImage" -> handleBartenderTemplateImage(conn, request, false);
                 case "bartenderTemplateImageWithParams" -> handleBartenderTemplateImage(conn, request, true);
+                case "jasperTemplates" -> handleJasperTemplates(conn);
                 case "submit" -> sendError(conn, "submit 已移除，请使用 doPrint");
                 default -> sendError(conn, "未知的消息类型: " + type);
             }
@@ -369,7 +372,7 @@ public class PrintWebSocketServer extends WebSocketServer {
     /**
      * 授权策略：
      * <ul>
-     *   <li>未授权时 BarTender 功能不可用，抛异常拒绝；</li>
+     *   <li>未授权时 BarTender、JasperReport 功能不可用，抛异常拒绝；</li>
      *   <li>未授权时 text/html 打印强制使用试用版页头页尾；</li>
      *   <li>已授权时页头页尾保持用户设置（不设置时默认为空）。</li>
      * </ul>
@@ -379,6 +382,12 @@ public class PrintWebSocketServer extends WebSocketServer {
         if ("bartender".equalsIgnoreCase(ctype)) {
             if (!LicenseManager.isAuthorized()) {
                 throw new IllegalArgumentException("未授权，BarTender 功能不可用，请联系作者购买授权");
+            }
+            return;
+        }
+        if ("jasper".equalsIgnoreCase(ctype)) {
+            if (!LicenseManager.isAuthorized()) {
+                throw new IllegalArgumentException("未授权，JasperReport 功能不可用，请联系作者购买授权");
             }
             return;
         }
@@ -395,6 +404,17 @@ public class PrintWebSocketServer extends WebSocketServer {
     private boolean requireBartender(WebSocket conn) {
         if (!LicenseManager.isAuthorized()) {
             sendError(conn, "未授权，BarTender 功能不可用，请联系作者购买授权");
+            return false;
+        }
+        return true;
+    }
+
+    /**
+     * JasperReport 功能授权检查；未授权时发送错误并返回 false
+     */
+    private boolean requireJasper(WebSocket conn) {
+        if (!LicenseManager.isAuthorized()) {
+            sendError(conn, "未授权，JasperReport 功能不可用，请联系作者购买授权");
             return false;
         }
         return true;
@@ -603,12 +623,33 @@ public class PrintWebSocketServer extends WebSocketServer {
         JSONObject response = new JSONObject();
         response.put("type", "bartenderInstance_result");
         boolean available = BartenderManager.isAvailable();
-        response.put("success", available);
+        response.put("success", true);
         response.put("available", available);
         response.put("version", BartenderManager.getVersion());
         response.put("fullVersion", BartenderManager.getFullVersion());
         if (!available) {
             response.put("message", "BarTender 未安装或不可用");
+        }
+        conn.send(JSON.toJSONString(response));
+    }
+
+    /**
+     * 列出 reports/bt 目录下所有 BarTender 模板
+     * { "type": "bartenderTemplates" }
+     *   → { "type": "bartenderTemplates_result", success, templates: [...] }
+     */
+    private void handleBartenderTemplates(WebSocket conn) {
+        if (!requireBartender(conn)) {
+            return;
+        }
+        JSONObject response = new JSONObject();
+        response.put("type", "bartenderTemplates_result");
+        try {
+            response.put("success", true);
+            response.put("templates", BartenderManager.listTemplates());
+        } catch (Exception e) {
+            response.put("success", false);
+            response.put("message", e.getMessage());
         }
         conn.send(JSON.toJSONString(response));
     }
@@ -737,5 +778,26 @@ public class PrintWebSocketServer extends WebSocketServer {
      */
     public int getClientCount() {
         return clients.size();
+    }
+
+    /**
+     * 列出 reports/ 目录下所有 JasperReport 模板
+     * { "type": "jasperTemplates" }
+     *   → { "type": "jasperTemplates_result", success, templates: [...] }
+     */
+    private void handleJasperTemplates(WebSocket conn) {
+        if (!requireJasper(conn)) {
+            return;
+        }
+        JSONObject response = new JSONObject();
+        response.put("type", "jasperTemplates_result");
+        try {
+            response.put("success", true);
+            response.put("templates", JasperReportManager.listTemplates());
+        } catch (Exception e) {
+            response.put("success", false);
+            response.put("message", e.getMessage());
+        }
+        conn.send(JSON.toJSONString(response));
     }
 }

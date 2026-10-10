@@ -2,7 +2,7 @@
  * xiaoxue-printer-sdk.js
  * 打印控件 WebSocket 客户端 SDK
  *
- * 封装与打印服务（ws://localhost:54321）的通信：
+ * 封装与打印服务（ws://127.0.0.1:54321）的通信：
  * - 连接管理：连接、断开、自动重连
  * - 事件订阅：open / close / error / message / welcome / taskListUpdate
  * - 打印服务 API（Promise 化）：doPrint / doPreview / getPrinters / getPageSize / getTaskList / getTaskStatus / cancelTask / clearTasks
@@ -15,7 +15,7 @@
  *   sdk.doPrint({ printer: 'HP', content: { type: 'text', value: '报表' } }).then(r => console.log(r));
  *
  * 获取可用打印机 / 纸张（需先创建 SDK 实例，未连接时自动连接）：
- *   const sdk = new XiaoxuePrinterSDK({ url: 'ws://localhost:54321' });
+ *   const sdk = new XiaoxuePrinterSDK({ url: 'ws://127.0.0.1:54321' });
  *   sdk.getPrinters().then(r => console.log(r.printers));
  *   sdk.getPageSize('Microsoft Print to PDF').then(r => console.log(r.sizes));
  *
@@ -33,12 +33,12 @@
 (function (global) {
   'use strict';
 
-  const DEFAULT_URL = 'ws://localhost:54321';
+  const DEFAULT_URL = 'ws://127.0.0.1:54321';
 
   class XiaoxuePrinterSDK {
     /**
      * @param {Object} options
-     * @param {string}  [options.url='ws://localhost:54321']  WebSocket 服务地址
+     * @param {string}  [options.url='ws://127.0.0.1:54321']  WebSocket 服务地址
      * @param {boolean} [options.autoReconnect=true]          是否自动重连
      * @param {number}  [options.reconnectDelay=3000]         重连间隔（毫秒）
      * @param {number}  [options.maxReconnectAttempts=Infinity] 最大重连次数
@@ -99,7 +99,8 @@
     }
 
     _emit(event, ...args) {
-      (this._handlers[event] || []).forEach((cb) => {
+      // 拷贝后再遍历：监听器里 off() 会改原数组，直接 forEach 会跳过下一个监听器
+      (this._handlers[event] || []).slice().forEach((cb) => {
         try {
           cb(...args);
         } catch (e) {
@@ -215,6 +216,13 @@
     }
 
     _resolvePending(type, msg) {
+      // 服务端用 type=error 回绝请求（如未授权），应对到正在等待的那一次调用，而不是一直等到超时
+      if (type === 'error' && this._pending.length) {
+        const p = this._pending.shift();
+        clearTimeout(p.timer);
+        p.reject(new Error((msg && msg.message) || '服务器错误'));
+        return;
+      }
       for (let i = 0; i < this._pending.length; i++) {
         const p = this._pending[i];
         if (p.expectType === type) {
@@ -407,6 +415,14 @@
         this._request({ type: 'bartenderInstance' }, 'bartenderInstance_result'))
         .then((info) => new Bartender(this, info));
     }
+
+    /**
+     * 获取 JasperReport 实例。返回的实例可列出 reports/jr 目录下所有模板。
+     * @returns {Promise<Jasper>}
+     */
+    getJasperInstance() {
+      return this._ensureConnected().then(() => new Jasper(this));
+    }
   }
 
   /**
@@ -450,7 +466,7 @@
 
     /**
      * 获取模板参数（参数名 + 控件类型）。
-     * @param {string} templatePath BarTender 模板路径（.btw）
+     * @param {string} templatePath BarTender 模板文件名（reports/bt 下的 .btw）
      * @returns {Promise<Object>} bartenderTemplateParams_result
      *   { success, templatePath, params: [{ name, type }] }
      *   type 为控件类型（ObjectType 粒度）：Barcode / Text / Picture / RichText / RFID 等，
@@ -463,7 +479,7 @@
 
     /**
      * 获取模板图像（无参数），返回 base64 图片。
-     * @param {string} templatePath BarTender 模板路径（.btw）
+     * @param {string} templatePath BarTender 模板文件名（reports/bt 下的 .btw）
      * @param {number} [dpi=300] 渲染分辨率
      * @returns {Promise<Object>} bartenderTemplateImage_result { success, templatePath, image: <base64> }
      */
@@ -476,7 +492,7 @@
 
     /**
      * 获取带参数的模板预览图像（base64）。
-     * @param {string} templatePath BarTender 模板路径（.btw）
+     * @param {string} templatePath BarTender 模板文件名（reports/bt 下的 .btw）
      * @param {Object} [params={}] 模板字段值
      * @param {number} [dpi=300] 渲染分辨率
      * @returns {Promise<Object>} bartenderTemplateImageWithParams_result { success, templatePath, image: <base64> }
@@ -487,11 +503,40 @@
           { type: 'bartenderTemplateImageWithParams', templatePath, params, dpi },
           'bartenderTemplateImageWithParams_result'));
     }
+
+    /**
+     * 列出安装目录 reports/bt 下所有 BarTender 模板（.btw）。
+     * @returns {Promise<Object>} bartenderTemplates_result { success, templates: [{name, file, size}] }
+     */
+    listTemplates() {
+      return this._sdk._ensureConnected().then(() =>
+        this._sdk._request({ type: 'bartenderTemplates' }, 'bartenderTemplates_result'));
+    }
+  }
+
+  /**
+   * JasperReport 实例对象。
+   * 通过 {@link XiaoxuePrinterSDK#getJasperInstance()} 获取。
+   */
+  class Jasper {
+    constructor(sdk) {
+      this._sdk = sdk;
+    }
+
+    /**
+     * 列出安装目录 reports/jr 下所有 JasperReport 模板（.jasper / .jrxml）。
+     * @returns {Promise<Object>} jasperTemplates_result { success, templates: [{name, file, size}] }
+     */
+    listTemplates() {
+      return this._sdk._ensureConnected().then(() =>
+        this._sdk._request({ type: 'jasperTemplates' }, 'jasperTemplates_result'));
+    }
   }
 
   // 导出（浏览器挂到全局 / Node 用 module.exports）
   global.XiaoxuePrinterSDK = XiaoxuePrinterSDK;
   global.Bartender = Bartender;
+  global.Jasper = Jasper;
   if (typeof module !== 'undefined' && module.exports) {
     module.exports = XiaoxuePrinterSDK;
   }
