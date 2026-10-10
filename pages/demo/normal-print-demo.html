@@ -80,6 +80,7 @@
         <div class="tab active" data-tab="text" onclick="switchTab('text')">文本</div>
         <div class="tab" data-tab="html" onclick="switchTab('html')">HTML</div>
         <div class="tab" data-tab="bartender" onclick="switchTab('bartender')">BarTender</div>
+      <div class="tab" data-tab="jasper" onclick="switchTab('jasper')">JasperReport</div>
       </div>
 
       <div class="tab-panel active" data-panel="text">
@@ -164,6 +165,28 @@
 
         <div class="hint">预览/打印时将直接调用本机 BarTender 渲染或打印该模板。</div>
       </div>
+
+      <div class="tab-panel" data-panel="jasper">
+        <div class="form-item full">
+          <label>JasperReport 模板（reports/jr 目录下）</label>
+          <select id="jrTemplate"><option value="">请先点击「列出模板」</option></select>
+        </div>
+        <div class="form-item full" style="margin-top:12px;">
+          <label>报表参数 (JSON，可选，对应模板 ${} 字段)</label>
+          <textarea id="jrParams" style="min-height:90px" placeholder='如：{"orderNo":"SO20260909","customer":"XX公司"}'>{&quot;productionNo&quot;:&quot;PO20261009001&quot;,&quot;pickingNo&quot;:&quot;SCLL202610000231&quot;,&quot;productCode&quot;:&quot;3.45.01.0011&quot;,&quot;productName&quot;:&quot;射频通讯模组&quot;,&quot;specModel&quot;:&quot;JBF-WM124(868MHz)(带包装)&quot;,&quot;workshop&quot;:&quot;控制器车间&quot;,&quot;setCount&quot;:&quot;5000&quot;,&quot;erpNo&quot;:&quot;&quot;,&quot;qrContent&quot;:&quot;PO20261009001&quot;}</textarea>
+        </div>
+        <div class="form-item full" style="margin-top:12px;">
+          <label>明细数据 (JSON 数组，可选，对应 Detail band)</label>
+          <textarea id="jrData" style="min-height:110px" placeholder='如：[{"item":"商品A","qty":2},{"item":"商品B","qty":1}]'>[{&quot;seq&quot;:4,&quot;warehouse&quot;:&quot;涿鹿原材料库&quot;,&quot;location&quot;:&quot;包材库&quot;,&quot;materialCode&quot;:&quot;1.08.01.0518&quot;,&quot;materialName&quot;:&quot;外包装箱&quot;,&quot;spec&quot;:&quot;PKG-JBF-WM131&quot;,&quot;unit&quot;:&quot;个&quot;,&quot;qty&quot;:1.5},{&quot;seq&quot;:3,&quot;warehouse&quot;:&quot;涿鹿原材料库&quot;,&quot;location&quot;:&quot;包材库&quot;,&quot;materialCode&quot;:&quot;1.08.02.0354&quot;,&quot;materialName&quot;:&quot;吸塑盖&quot;,&quot;spec&quot;:&quot;MCH-JBF-WM131-02&quot;,&quot;unit&quot;:&quot;个&quot;,&quot;qty&quot;:1.5},{&quot;seq&quot;:2,&quot;warehouse&quot;:&quot;涿鹿原材料库&quot;,&quot;location&quot;:&quot;包材库&quot;,&quot;materialCode&quot;:&quot;1.08.02.0366&quot;,&quot;materialName&quot;:&quot;吸塑盒&quot;,&quot;spec&quot;:&quot;MCH-JBF-WM124-001&quot;,&quot;unit&quot;:&quot;个&quot;,&quot;qty&quot;:67},{&quot;seq&quot;:5,&quot;warehouse&quot;:&quot;涿鹿原材料库&quot;,&quot;location&quot;:&quot;探测器车间&quot;,&quot;materialCode&quot;:&quot;1.11.02.0972&quot;,&quot;materialName&quot;:&quot;标签&quot;,&quot;spec&quot;:&quot;LBL-JBF-WM131&quot;,&quot;unit&quot;:&quot;枚&quot;,&quot;qty&quot;:3.5},{&quot;seq&quot;:1,&quot;warehouse&quot;:&quot;涿鹿原材料库&quot;,&quot;location&quot;:&quot;&quot;,&quot;materialCode&quot;:&quot;2.01.01.0737&quot;,&quot;materialName&quot;:&quot;JBF-WM124贴片电路板&quot;,&quot;spec&quot;:&quot;JBF-WM124(868MHz)-SMD&quot;,&quot;unit&quot;:&quot;块&quot;,&quot;qty&quot;:5000}]</textarea>
+        </div>
+        <div class="form-item full" style="margin-top:12px;">
+          <div class="actions">
+            <button class="btn btn-primary" id="btnJrTemplates">列出模板</button>
+          </div>
+          <div id="jrResult" class="hint" style="margin-top:8px;">（模板列表将显示在这里）</div>
+        </div>
+        <div class="hint">模板为 .jasper / .jrxml 文件，放在安装目录 reports/jr 下。填充后生成 PDF 直接预览/打印。</div>
+      </div>
     </div>
 
     <!-- 右侧：打印设置 -->
@@ -246,12 +269,12 @@
 
   <div class="log" id="log"></div>
 
-  <script src="../xiaoxue-printer-sdk.min.js"></script>
+  <script src="../sdk/xiaoxue-printer-sdk.min.js"></script>
   <script>
     var $ = function (id) { return document.getElementById(id); };
     var activeTab = 'text';
 
-    var sdk = new XiaoxuePrinterSDK({ url: 'ws://localhost:54321' });
+    var sdk = new XiaoxuePrinterSDK({ url: 'ws://127.0.0.1:54321' });
     var connected = false;
 
     // ---------- Tab 切换 ----------
@@ -340,6 +363,12 @@
         var params = {};
         try { params = JSON.parse($('btParams').value || '{}'); } catch (e) { params = {}; }
         content = { type: 'bartender', value: $('btTemplate').value, params: params };
+      } else if (activeTab === 'jasper') {
+        var jrParams = {};
+        try { jrParams = JSON.parse($('jrParams').value || '{}'); } catch (e) { jrParams = {}; }
+        var jrData = [];
+        try { jrData = JSON.parse($('jrData').value || '[]'); } catch (e) { jrData = []; }
+        content = { type: 'jasper', value: $('jrTemplate').value, params: jrParams, data: jrData };
       } else if (activeTab === 'html') {
         content = { type: 'html', value: $('htmlContent').value };
       } else {
@@ -361,6 +390,36 @@
       sdk.doPrint(buildRequest())
         .then(function (r) { log('打印任务已提交，任务ID: ' + r.taskId, 'success'); })
         .catch(function (e) { log('打印失败: ' + e.message, 'error'); });
+    });
+
+    // ---------- JasperReport 示例 ----------
+    $('btnJrTemplates').addEventListener('click', function () {
+      log('列出 JasperReport 模板...', 'info');
+      sdk.getJasperInstance().then(function (jr) {
+        return jr.listTemplates();
+      }).then(function (res) {
+        var sel = $('jrTemplate');
+        sel.innerHTML = '';
+        if (!res.templates || res.templates.length === 0) {
+          var opt = document.createElement('option');
+          opt.value = ''; opt.textContent = '（reports/jr 目录无模板）';
+          sel.appendChild(opt);
+          $('jrResult').textContent = 'reports/jr 目录下未找到 .jasper / .jrxml 模板';
+          log('reports/jr 目录下未找到模板', 'error');
+          return;
+        }
+        res.templates.forEach(function (t) {
+          var opt = document.createElement('option');
+          opt.value = t.file; opt.textContent = t.name + '（' + (t.size/1024).toFixed(1) + ' KB）';
+          sel.appendChild(opt);
+        });
+        $('jrResult').textContent = '找到 ' + res.templates.length + ' 个模板：' + res.templates.map(function(t){return t.name;}).join(', ');
+        log('找到 ' + res.templates.length + ' 个 JasperReport 模板', 'success');
+      }).catch(function (e) {
+        var msg = e.message || '列出模板失败';
+        $('jrResult').textContent = msg;
+        log(msg, 'warn');
+      });
     });
 
     // ---------- BarTender 示例 ----------
@@ -474,6 +533,7 @@
       log('连接错误: ' + (e && e.message || '未知错误'), 'error');
     });
     sdk.on('welcome', function (msg) {
+      setConnected(true);
       log('欢迎消息: ' + msg.message + '（端口 ' + msg.port + '）', 'info');
     });
 

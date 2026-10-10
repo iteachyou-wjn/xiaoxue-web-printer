@@ -111,6 +111,7 @@
         <div class="tab" :class="{active: activeTab==='html'}" @click="activeTab='html'">HTML</div>
         <div class="tab" :class="{active: activeTab==='task'}" @click="activeTab='task'">打印任务</div>
         <div class="tab" :class="{active: activeTab==='bartender'}" @click="activeTab='bartender'">BarTender</div>
+        <div class="tab" :class="{active: activeTab==='jasper'}" @click="activeTab='jasper'">JasperReport</div>
         <div class="tab" :class="{active: activeTab==='code'}" @click="activeTab='code'">集成代码</div>
       </div>
 
@@ -136,7 +137,7 @@
         <h3>二、在 Vue2 组件中使用</h3>
         <pre>// 组件中
 created() {
-  this.sdk = new XiaoxuePrinterSDK({ url: 'ws://localhost:54321' });
+  this.sdk = new XiaoxuePrinterSDK({ url: 'ws://127.0.0.1:54321' });
   this.sdk.on('open', () => {
     this.connected = true;
     this.fetchPrinters();
@@ -207,7 +208,7 @@ const img2 = await bt.getTemplateImageWithParams('D:\\labels\\a.btw', { 字段1:
         <h3>二、在 Vue2 中使用</h3>
         <pre>// 组件中
 created() {
-  this.sdk = new XiaoxuePrinterSDK({ url: 'ws://localhost:54321' });
+  this.sdk = new XiaoxuePrinterSDK({ url: 'ws://127.0.0.1:54321' });
   this.sdk.on('taskListUpdate', (list) => { this.tasks = list || []; });
   this.sdk.on('open', this.refreshTasks);
   this.sdk.connect();
@@ -263,6 +264,22 @@ methods: {
         </div>
         <div class="hint" style="margin-top:12px;">预览/打印时将直接调用本机 BarTender 渲染或打印该模板。</div>
       </div>
+
+      <div v-show="activeTab==='jasper'">
+        <div class="form-item full">
+          <label>JasperReport 模板名（reports/jr 目录下）</label>
+          <input v-model="jrTemplate" placeholder="如：picking-slip.jasper">
+        </div>
+        <div class="form-item full" style="margin-top:12px;">
+          <label>报表参数 (JSON)</label>
+          <textarea v-model="jrParamsText" style="min-height:100px;" placeholder='{"orderNo":"SO001"}'></textarea>
+        </div>
+        <div class="form-item full" style="margin-top:12px;">
+          <label>明细数据 (JSON 数组)</label>
+          <textarea v-model="jrDataText" style="min-height:100px;" placeholder='[{"name":"A","qty":1}]'></textarea>
+        </div>
+        <div class="hint" style="margin-top:12px;">模板放安装目录 reports/jr 下，填充后生成 PDF 预览/打印。</div>
+      </div>
     </div>
 
     <div class="log">
@@ -271,7 +288,7 @@ methods: {
   </div>
 
   <script src="https://unpkg.com/vue@2.7.16/dist/vue.min.js"></script>
-  <script src="../xiaoxue-printer-sdk.min.js"></script>
+  <script src="../sdk/xiaoxue-printer-sdk.min.js"></script>
   <script>
     var fmt = function (t) { return '[' + new Date().toLocaleTimeString('zh-CN', { hour12: false }) + '] '; };
 
@@ -303,12 +320,15 @@ methods: {
           btInstanceInfo: '（点击「获取 BarTender 实例」查看版本信息）',
           btParamsResult: '（模板参数将显示在这里）',
           btPreviewImg: '',
+          jrTemplate: 'picking-slip.jasper',
+          jrParamsText: '{"productionNo":"PO20261009001","pickingNo":"SCLL202610000231","productCode":"3.45.01.0011","productName":"射频通讯模组","specModel":"JBF-WM124(868MHz)(带包装)","workshop":"控制器车间","setCount":"5000","erpNo":"","qrContent":"PO20261009001"}',
+          jrDataText: '[{"seq":4,"warehouse":"涿鹿原材料库","location":"包材库","materialCode":"1.08.01.0518","materialName":"外包装箱","spec":"PKG-JBF-WM131","unit":"个","qty":1.5},{"seq":3,"warehouse":"涿鹿原材料库","location":"包材库","materialCode":"1.08.02.0354","materialName":"吸塑盖","spec":"MCH-JBF-WM131-02","unit":"个","qty":1.5},{"seq":1,"warehouse":"涿鹿原材料库","location":"","materialCode":"2.01.01.0737","materialName":"JBF-WM124贴片电路板","spec":"JBF-WM124(868MHz)-SMD","unit":"块","qty":5000}]',
           logs: []
         };
       },
       created: function () {
         var vm = this;
-        this.sdk = new XiaoxuePrinterSDK({ url: 'ws://localhost:54321' });
+        this.sdk = new XiaoxuePrinterSDK({ url: 'ws://127.0.0.1:54321' });
         this.sdk.on('open', function () {
           vm.connected = true;
           vm.log('已连接到打印服务', 'info');

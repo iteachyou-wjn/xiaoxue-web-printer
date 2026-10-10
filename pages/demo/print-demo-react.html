@@ -61,7 +61,7 @@
   <script src="https://unpkg.com/react@18.3.1/umd/react.production.min.js"></script>
   <script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.production.min.js"></script>
   <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
-  <script src="../xiaoxue-printer-sdk.min.js"></script>
+  <script src="../sdk/xiaoxue-printer-sdk.min.js"></script>
   <script type="text/babel">
     var fmt = function () { return '[' + new Date().toLocaleTimeString('zh-CN', { hour12: false }) + '] '; };
     var LOG_REF = { current: null };
@@ -92,6 +92,9 @@
   const [btInstanceInfo, setBtInstanceInfo] = useState('（点击「获取 BarTender 实例」查看版本信息）');
   const [btParamsResult, setBtParamsResult] = useState('（模板参数将显示在这里）');
   const [btPreviewImg, setBtPreviewImg] = useState('');
+      const [jrTemplate, setJrTemplate] = useState('picking-slip.jasper');
+      const [jrParamsText, setJrParamsText] = useState('{"productionNo":"PO20261009001","pickingNo":"SCLL202610000231","productCode":"3.45.01.0011","productName":"射频通讯模组","specModel":"JBF-WM124(868MHz)(带包装)","workshop":"控制器车间","setCount":"5000","erpNo":"","qrContent":"PO20261009001"}');
+      const [jrDataText, setJrDataText] = useState('[{"seq":4,"warehouse":"涿鹿原材料库","location":"包材库","materialCode":"1.08.01.0518","materialName":"外包装箱","spec":"PKG-JBF-WM131","unit":"个","qty":1.5},{"seq":1,"warehouse":"涿鹿原材料库","location":"","materialCode":"2.01.01.0737","materialName":"JBF-WM124贴片电路板","spec":"JBF-WM124(868MHz)-SMD","unit":"块","qty":5000}]');
       const sdkRef = useRef(null);
 
       const log = function (msg, level) {
@@ -119,7 +122,7 @@
       };
 
       useEffect(function () {
-        const sdk = new XiaoxuePrinterSDK({ url: 'ws://localhost:54321' });
+        const sdk = new XiaoxuePrinterSDK({ url: 'ws://127.0.0.1:54321' });
         sdkRef.current = sdk;
         sdk.on('open', function () { setConnected(true); log('已连接到打印服务', 'info'); refreshPrinters(sdk); });
         sdk.on('close', function () { setConnected(false); log('连接已断开', 'warn'); });
@@ -138,6 +141,7 @@
       const buildRequest = function () {
         const isHtml = activeTab === 'html';
         const isBt = activeTab === 'bartender';
+        const isJr = activeTab === 'jasper';
         const base = {
           printer: printer,
           style: {
@@ -151,6 +155,12 @@
           let params = {};
           try { params = JSON.parse(btParamsText || '{}'); } catch (e) { params = {}; }
           base.content = { type: 'bartender', value: btTemplate, params: params };
+          return base;
+        }
+        if (isJr) {
+          let jp = {}; try { jp = JSON.parse(jrParamsText || '{}'); } catch(e) {}
+          let jd = []; try { jd = JSON.parse(jrDataText || '[]'); } catch(e) {}
+          base.content = { type: 'jasper', value: jrTemplate, params: jp, data: jd };
           return base;
         }
         base.content = isHtml ? { type: 'html', value: htmlContent } : { type: 'text', value: content };
@@ -308,6 +318,7 @@
               <div className={tabCls('html')} onClick={() => setActiveTab('html')}>HTML</div>
               <div className={tabCls('task')} onClick={() => setActiveTab('task')}>打印任务</div>
               <div className={tabCls('bartender')} onClick={() => setActiveTab('bartender')}>BarTender</div>
+              <div className={tabCls('jasper')} onClick={() => setActiveTab('jasper')}>JasperReport</div>
               <div className={tabCls('code')} onClick={() => setActiveTab('code')}>集成代码</div>
             </div>
 
@@ -344,7 +355,7 @@ export default function App() {
   const [printers, setPrinters] = useState([]);
 
   useEffect(() => {
-    const sdk = new XiaoxuePrinterSDK({ url: 'ws://localhost:54321' });
+    const sdk = new XiaoxuePrinterSDK({ url: 'ws://127.0.0.1:54321' });
     sdkRef.current = sdk;
     sdk.on('open', () => { setConnected(true); fetchPrinters(sdk); });
     sdk.connect();
@@ -413,7 +424,7 @@ export default function TaskList() {
   const [tasks, setTasks] = useState([]);
 
   useEffect(() => {
-    const sdk = new XiaoxuePrinterSDK({ url: 'ws://localhost:54321' });
+    const sdk = new XiaoxuePrinterSDK({ url: 'ws://127.0.0.1:54321' });
     sdkRef.current = sdk;
     sdk.on('taskListUpdate', (list) => setTasks(list || []));
     sdk.on('open', refresh);
