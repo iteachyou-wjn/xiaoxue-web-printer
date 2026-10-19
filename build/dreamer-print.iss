@@ -1,5 +1,5 @@
 #define MyAppName "晓雪WEB打印控件"
-#define MyAppVersion "1.0.6"
+#define MyAppVersion "1.0.7"
 #define MyAppPublisher "I Teach You"
 #define MyAppExeName "晓雪WEB打印控件.exe"
 

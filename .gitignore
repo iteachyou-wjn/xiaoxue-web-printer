@@ -33,8 +33,6 @@ logs/
 build/app-image/
 build/input/
 build/libs/
-build/*.ico
-build/*.iss
 
 # 临时验证 / 临时文件
 _spike/

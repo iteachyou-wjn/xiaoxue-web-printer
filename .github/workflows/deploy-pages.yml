@@ -5,6 +5,8 @@ on:
     branches: [master]
     paths:
       - 'pages/**'
+      - 'sdk/xiaoxue-printer-sdk.js'
+      - 'sdk/xiaoxue-printer-sdk.min.js'
       - '.github/workflows/deploy-pages.yml'
   workflow_dispatch:
 
@@ -26,6 +28,11 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+
+      - name: Sync SDK for online demos
+        run: |
+          mkdir -p pages/sdk
+          cp sdk/xiaoxue-printer-sdk.js sdk/xiaoxue-printer-sdk.min.js pages/sdk/
 
       - name: Setup Pages
         uses: actions/configure-pages@v5

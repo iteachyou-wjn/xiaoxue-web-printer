@@ -1,5 +1,28 @@
 # 晓雪WEB打印控件 版本说明
 
+## v1.0.7 (2026-10-19)
+
+### 新增
+- **BarTender 模板列表 API**：WebSocket `bartenderTemplates` / SDK `Bartender#listTemplates()`，扫描安装目录 `reports/bt` 下 `.btw` 文件（与 Jasper 列出模板用法一致）。
+- **授权策略补全**：未授权时 JasperReport、BarTender 的列出模板、预览、打印均不可用；文本/HTML 仍为试用版页眉页脚。
+
+### 优化
+- **SDK**：服务端返回 `type=error` 时正确结束对应 Promise，Demo 可展示「未授权」等提示；修复 `open` 事件监听器被提前移除导致打印机列表未加载的问题。
+- **Demo / 在线示例**：BarTender、Jasper 支持「列出模板」下拉选择；优化未授权时的界面提示。
+- **安装程序**：Inno Setup 中文界面、可选创建快捷方式、安装完成可选立即运行；安装包图标 `install.ico`；64 位默认安装到 Program Files。
+- **模板与字体路径**：`reports/jr`（Jasper）、`reports/bt`（BarTender）、`fonts` 在安装目录（与 exe 同级）读取；打包时自动复制。
+- **版本号**：Maven 对 `version.properties` 启用资源过滤，托盘/关于窗体显示真实版本号。
+- **GitHub Pages**：SDK 统一发布在 `/sdk/` 路径，CI 部署时从仓库 `sdk/` 同步。
+
+### 修复
+- 一键打包脚本在依赖列表未变化时误报 ProGuard `BEGIN_LIBS` 标记缺失。
+- 移除代码动态生成的领料单模板，改为仅使用 `reports/jr` 下 `.jasper` / `.jrxml` 文件。
+
+### 打包
+- 安装程序：`windows-晓雪WEB打印控件-1.0.7-x86_64.exe`。
+
+---
+
 ## v1.0.6 (2026-10-10)
 
 ### 新增
