@@ -161,6 +161,15 @@ Write-Host "[6/6] Inno Setup 编译安装包 ..."
 & $iscc (Join-Path $PSScriptRoot 'dreamer-print.iss')
 if ($LASTEXITCODE -ne 0) { throw 'Inno Setup 编译失败' }
 
+# 仅保留当前版本安装包，删除 build 下其它 windows-*.exe
+$keepExe = "windows-晓雪WEB打印控件-$Version-x86_64.exe"
+Get-ChildItem $PSScriptRoot -Filter 'windows-*.exe' -File | ForEach-Object {
+    if ($_.Name -ne $keepExe) {
+        Remove-Item $_.FullName -Force
+        Write-Host "  已删除旧安装包: $($_.Name)"
+    }
+}
+
 # ---------- 完成 ----------
 Write-Host ""
 Write-Host "打包完成！" -ForegroundColor Green

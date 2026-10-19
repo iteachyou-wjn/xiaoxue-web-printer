@@ -35,64 +35,19 @@ public class JasperReportManager {
 
     private static final List<String> SUPPORTED_EXT = Arrays.asList(".jasper", ".jrxml");
 
+    /** Jasper 通过 ThreadLocal 读取字体扩展；预览/打印可能在不同线程，需每次填充前绑定到当前线程 */
+    private static volatile net.sf.jasperreports.extensions.ExtensionsRegistry fontExtensionsRegistry;
+
     static {
-        // 强制全局默认字体为微软雅黑，避免回退到 Helvetica
         net.sf.jasperreports.engine.DefaultJasperReportsContext ctx =
                 net.sf.jasperreports.engine.DefaultJasperReportsContext.getInstance();
         ctx.setProperty("net.sf.jasperreports.default.font.name", "微软雅黑");
         ctx.setProperty("net.sf.jasperreports.default.pdf.font.name", "微软雅黑");
         ctx.setProperty("net.sf.jasperreports.default.pdf.encoding", "Identity-H");
         ctx.setProperty("net.sf.jasperreports.default.pdf.embedded", "true");
-
-        // 手动构建 FontFamily 并注册到线程级 ExtensionsRegistry
-        try {
-            String ttfPath = resolveFontFile("fonts/msyh.ttf");
-            String simheiPath = resolveFontFile("fonts/simhei.ttf");
-            log.info("注册字体文件: msyh={}, simhei={}", ttfPath, simheiPath);
-
-            net.sf.jasperreports.engine.fonts.SimpleFontFace normal =
-                    new net.sf.jasperreports.engine.fonts.SimpleFontFace(ctx);
-            normal.setTtf(ttfPath, false);
-            normal.loadFont();
-
-            net.sf.jasperreports.engine.fonts.SimpleFontFamily family =
-                    new net.sf.jasperreports.engine.fonts.SimpleFontFamily(ctx);
-            family.setName("微软雅黑");
-            family.setNormalFace(normal);
-            family.setBoldFace(normal);
-            family.setItalicFace(normal);
-            family.setBoldItalicFace(normal);
-            family.setPdfEncoding("Identity-H");
-            family.setPdfEmbedded(true);
-
-            java.util.List<net.sf.jasperreports.engine.fonts.FontFamily> families =
-                    java.util.Collections.singletonList(family);
-
-            net.sf.jasperreports.extensions.ExtensionsRegistry systemReg =
-                    net.sf.jasperreports.extensions.ExtensionsEnvironment.getExtensionsRegistry();
-            net.sf.jasperreports.extensions.ExtensionsRegistry customRegistry =
-                    new net.sf.jasperreports.extensions.ExtensionsRegistry() {
-                        @Override
-                        @SuppressWarnings("unchecked")
-                        public <T> java.util.List<T> getExtensions(Class<T> extensionType) {
-                            if (net.sf.jasperreports.engine.fonts.FontFamily.class.equals(extensionType)) {
-                                return (java.util.List<T>) families;
-                            }
-                            return systemReg.getExtensions(extensionType);
-                        }
-                    };
-            java.lang.reflect.Field trField = net.sf.jasperreports.extensions.ExtensionsEnvironment.class
-                    .getDeclaredField("threadRegistry");
-            trField.setAccessible(true);
-            @SuppressWarnings("unchecked")
-            java.lang.ThreadLocal<net.sf.jasperreports.extensions.ExtensionsRegistry> tr =
-                    (java.lang.ThreadLocal<net.sf.jasperreports.extensions.ExtensionsRegistry>) trField.get(null);
-            tr.set(customRegistry);
-            log.info("字体扩展注册完成");
-        } catch (Exception e) {
-            log.error("手动注册字体扩展失败", e);
-        }
         registerFonts();
+        ensureFontExtensionsRegistry();
+        applyFontExtensionsToCurrentThread();
     }
 
     /**
@@ -218,7 +173,7 @@ public class JasperReportManager {
      */
     public static byte[] fillToPdf(String templateName, Map<String, Object> params,
                                    List<Map<String, Object>> dataList) throws Exception {
-        installFontRegistry();
+        applyFontExtensionsToCurrentThread();
         JasperReport report = loadTemplate(templateName);
 
         Map<String, Object> map = new HashMap<>();
@@ -281,53 +236,72 @@ public class JasperReportManager {
         throw new IllegalStateException("找不到字体文件: " + fileName);
     }
 
-    private static volatile boolean fontInstalled = false;
+    private static void ensureFontExtensionsRegistry() {
+        if (fontExtensionsRegistry != null) {
+            return;
+        }
+        synchronized (JasperReportManager.class) {
+            if (fontExtensionsRegistry != null) {
+                return;
+            }
+            try {
+                net.sf.jasperreports.engine.DefaultJasperReportsContext ctx =
+                        net.sf.jasperreports.engine.DefaultJasperReportsContext.getInstance();
+                String ttfPath = resolveFontFile("fonts/msyh.ttf");
+                String simheiPath = resolveFontFile("fonts/simhei.ttf");
+                log.info("注册字体文件: msyh={}, simhei={}", ttfPath, simheiPath);
 
-    private static void installFontRegistry() {
-        if (fontInstalled) return;
-        try {
-            net.sf.jasperreports.engine.DefaultJasperReportsContext ctx =
-                    net.sf.jasperreports.engine.DefaultJasperReportsContext.getInstance();
-            String ttfPath = resolveFontFile("fonts/msyh.ttf");
-            net.sf.jasperreports.engine.fonts.SimpleFontFace normal =
-                    new net.sf.jasperreports.engine.fonts.SimpleFontFace(ctx);
-            normal.setTtf(ttfPath, false);
-            normal.loadFont();
-            net.sf.jasperreports.engine.fonts.SimpleFontFamily family =
-                    new net.sf.jasperreports.engine.fonts.SimpleFontFamily(ctx);
-            family.setName("微软雅黑");
-            family.setNormalFace(normal);
-            family.setBoldFace(normal);
-            family.setItalicFace(normal);
-            family.setBoldItalicFace(normal);
-            family.setPdfEncoding("Identity-H");
-            family.setPdfEmbedded(true);
-            java.util.List<net.sf.jasperreports.engine.fonts.FontFamily> families =
-                    java.util.Collections.singletonList(family);
-            net.sf.jasperreports.extensions.ExtensionsRegistry systemReg =
-                    net.sf.jasperreports.extensions.ExtensionsEnvironment.getExtensionsRegistry();
-            net.sf.jasperreports.extensions.ExtensionsRegistry customRegistry =
-                    new net.sf.jasperreports.extensions.ExtensionsRegistry() {
-                        @Override
-                        @SuppressWarnings("unchecked")
-                        public <T> java.util.List<T> getExtensions(Class<T> extensionType) {
-                            if (net.sf.jasperreports.engine.fonts.FontFamily.class.equals(extensionType)) {
-                                return (java.util.List<T>) families;
-                            }
-                            return systemReg.getExtensions(extensionType);
+                net.sf.jasperreports.engine.fonts.SimpleFontFace normal =
+                        new net.sf.jasperreports.engine.fonts.SimpleFontFace(ctx);
+                normal.setTtf(ttfPath, false);
+                normal.loadFont();
+
+                net.sf.jasperreports.engine.fonts.SimpleFontFamily family =
+                        new net.sf.jasperreports.engine.fonts.SimpleFontFamily(ctx);
+                family.setName("微软雅黑");
+                family.setNormalFace(normal);
+                family.setBoldFace(normal);
+                family.setItalicFace(normal);
+                family.setBoldItalicFace(normal);
+                family.setPdfEncoding("Identity-H");
+                family.setPdfEmbedded(true);
+
+                java.util.List<net.sf.jasperreports.engine.fonts.FontFamily> families =
+                        java.util.Collections.singletonList(family);
+                net.sf.jasperreports.extensions.ExtensionsRegistry systemReg =
+                        net.sf.jasperreports.extensions.ExtensionsEnvironment.getExtensionsRegistry();
+                fontExtensionsRegistry = new net.sf.jasperreports.extensions.ExtensionsRegistry() {
+                    @Override
+                    @SuppressWarnings("unchecked")
+                    public <T> java.util.List<T> getExtensions(Class<T> extensionType) {
+                        if (net.sf.jasperreports.engine.fonts.FontFamily.class.equals(extensionType)) {
+                            return (java.util.List<T>) families;
                         }
-                    };
+                        return systemReg.getExtensions(extensionType);
+                    }
+                };
+                log.info("字体扩展注册表已构建");
+            } catch (Exception e) {
+                log.error("构建字体扩展注册表失败", e);
+            }
+        }
+    }
+
+    private static void applyFontExtensionsToCurrentThread() {
+        ensureFontExtensionsRegistry();
+        if (fontExtensionsRegistry == null) {
+            return;
+        }
+        try {
             java.lang.reflect.Field trField = net.sf.jasperreports.extensions.ExtensionsEnvironment.class
                     .getDeclaredField("threadRegistry");
             trField.setAccessible(true);
             @SuppressWarnings("unchecked")
             java.lang.ThreadLocal<net.sf.jasperreports.extensions.ExtensionsRegistry> tr =
                     (java.lang.ThreadLocal<net.sf.jasperreports.extensions.ExtensionsRegistry>) trField.get(null);
-            tr.set(customRegistry);
-            fontInstalled = true;
-            log.info("字体扩展已安装到当前线程");
+            tr.set(fontExtensionsRegistry);
         } catch (Exception e) {
-            log.error("安装字体扩展失败", e);
+            log.error("绑定字体扩展到当前线程失败", e);
         }
     }
 
